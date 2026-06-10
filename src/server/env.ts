@@ -16,6 +16,9 @@ function required(name: string): string {
 
 export const env = {
   get databaseUrl(): string {
+    // Netlify DB 확장은 NETLIFY_DATABASE_URL로 자동 주입한다 — 둘 다 지원
+    const netlifyUrl = process.env.NETLIFY_DATABASE_URL;
+    if (!process.env.DATABASE_URL && netlifyUrl) return netlifyUrl;
     return required("DATABASE_URL");
   },
   get adminSessionSecret(): string {
