@@ -3,6 +3,8 @@ import { Box, Container, Flex, Link, Text } from "@chakra-ui/react";
 /**
  * 투표소 공통 셸.
  * 신문 1면 같은 editorial masthead + 본문 + 조용한 푸터.
+ * 사용자 화면 전체에 커뮤니티 배경 이미지가 깔린다 —
+ * 가독성을 위해 옅은 종이색 워시를 한 겹 덮고, 모바일에서는 센터 크롭(cover + center).
  */
 export function ElectionShell({
   children,
@@ -12,7 +14,16 @@ export function ElectionShell({
   maxW?: string;
 }) {
   return (
-    <Flex direction="column" minH="100dvh" bg="bg.canvas">
+    <Flex
+      direction="column"
+      minH="100dvh"
+      bg="bg.canvas"
+      backgroundImage="linear-gradient(rgba(251,248,241,0.66), rgba(251,248,241,0.66)), url('/background-image.png')"
+      backgroundSize="cover"
+      backgroundPosition="center"
+      backgroundRepeat="no-repeat"
+      backgroundAttachment={{ base: "scroll", md: "fixed" }}
+    >
       <Box as="header" borderBottom="3px double" borderColor="ink.700">
         <Container maxW={maxW} py={{ base: 4, md: 5 }}>
           <Flex align="baseline" justify="space-between" gap={4}>
