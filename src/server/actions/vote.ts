@@ -12,6 +12,7 @@ import {
 } from "../auth/voter-session";
 import { getCandidate } from "../sql/candidates";
 import { getElection } from "../sql/elections";
+import { countSubmissions } from "../sql/submissions";
 import { assertVotingOpen } from "../guards/election-state";
 import { signPayload } from "../auth/signing";
 import { env } from "../env";
@@ -113,6 +114,8 @@ export async function submitVoteAction(
   }
 
   // 세션을 즉시 폐기하고, 완료 화면 접근용 단기 쿠키만 남긴다.
+  // voterOrder = 접수 순번 (참여 인증 카드 "N번째 유권자")
+  const voterOrder = await countSubmissions(electionId);
   await destroyVoterSession();
   const store = await cookies();
   store.set(
@@ -121,6 +124,7 @@ export async function submitVoteAction(
       {
         electionId,
         voterName: session.voterName,
+        voterOrder,
         exp: Math.floor(Date.now() / 1000) + 3600,
       },
       env.adminSessionSecret,

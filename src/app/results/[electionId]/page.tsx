@@ -3,6 +3,8 @@ import NextLink from "next/link";
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { ElectionShell } from "@/components/layout/ElectionShell";
 import { ResultLockPanel } from "@/components/election/ResultLockPanel";
+import { SealRevealIntro } from "@/components/election/SealRevealIntro";
+import { ShareResultCard } from "@/components/election/ShareResultCard";
 import { WinnerAnnouncement } from "@/components/election/WinnerAnnouncement";
 import { getElection } from "@/server/sql/elections";
 import { getParticipation } from "@/server/sql/submissions";
@@ -64,25 +66,37 @@ export default async function ResultsPage({
         </Box>
 
         {results ? (
-          <>
-            <WinnerAnnouncement results={results} />
-            {results.messagesByCandidate.length > 0 && (
-              <Flex justify="center">
-                <Button
-                  asChild
-                  size="lg"
-                  bg="ink.900"
-                  color="paper.50"
-                  _hover={{ bg: "ink.700" }}
-                  fontWeight={700}
-                >
-                  <NextLink href={`/results/${electionId}/replay`}>
-                    🎬 한 마디 상영관 입장
-                  </NextLink>
-                </Button>
-              </Flex>
-            )}
-          </>
+          <SealRevealIntro electionId={electionId}>
+            <Stack gap={8}>
+              <WinnerAnnouncement results={results} />
+              {results.messagesByCandidate.length > 0 && (
+                <Flex justify="center">
+                  <Button
+                    asChild
+                    size="lg"
+                    bg="ink.900"
+                    color="paper.50"
+                    _hover={{ bg: "ink.700" }}
+                    fontWeight={700}
+                  >
+                    <NextLink href={`/results/${electionId}/replay`}>
+                      🎬 한 마디 상영관 입장
+                    </NextLink>
+                  </Button>
+                </Flex>
+              )}
+              {results.totalBallots > 0 && (
+                <ShareResultCard
+                  electionTitle={election.title}
+                  isTie={results.isTie}
+                  totalBallots={results.totalBallots}
+                  winnerNames={results.perCandidate
+                    .filter((c) => results.winnerIds.includes(c.candidateId))
+                    .map((c) => c.name)}
+                />
+              )}
+            </Stack>
+          </SealRevealIntro>
         ) : (
           <ResultLockPanel
             election={election}

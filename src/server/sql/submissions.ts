@@ -168,6 +168,15 @@ export async function listPendingIds(electionId: string): Promise<string[]> {
   return rows.map((r) => r.id);
 }
 
+/** 총 접수 수 (참여 인증 카드의 "N번째 유권자" 표시용) */
+export async function countSubmissions(electionId: string): Promise<number> {
+  const { rows } = await query<{ count: string }>(
+    "select count(*) as count from vote_submissions where election_id = $1",
+    [electionId],
+  );
+  return Number(rows[0].count);
+}
+
 /** 실시간 투표 현황 — aggregate count만 */
 export async function getParticipation(
   electionId: string,

@@ -4,6 +4,7 @@ import NextLink from "next/link";
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { ElectionShell } from "@/components/layout/ElectionShell";
 import { ParticipationLive } from "@/components/election/ParticipationLive";
+import { ParticipationCard } from "@/components/vote/ParticipationCard";
 import { getElection } from "@/server/sql/elections";
 import { getParticipation } from "@/server/sql/submissions";
 import { verifyPayload } from "@/server/auth/signing";
@@ -25,10 +26,12 @@ export default async function CompletePage({
   const store = await cookies();
   const doneToken = store.get("cv_done")?.value;
   const done = doneToken
-    ? verifyPayload<{ electionId: string; voterName?: string; exp: number }>(
-        doneToken,
-        env.adminSessionSecret,
-      )
+    ? verifyPayload<{
+        electionId: string;
+        voterName?: string;
+        voterOrder?: number;
+        exp: number;
+      }>(doneToken, env.adminSessionSecret)
     : null;
   if (
     !done ||
@@ -107,6 +110,14 @@ export default async function CompletePage({
             접수완료
           </Flex>
         </Box>
+
+        {/* 참여 인증 카드 — 방에 자랑하고 다음 유권자 데려오기 */}
+        {done.voterOrder && done.voterOrder > 0 && (
+          <ParticipationCard
+            electionTitle={election.title}
+            voterOrder={done.voterOrder}
+          />
+        )}
 
         {/* 실시간 현황 — 검수가 처리되면 여기 숫자가 움직인다 */}
         <Box

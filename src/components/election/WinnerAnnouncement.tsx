@@ -1,4 +1,5 @@
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { ResultCountUpBoard } from "./ResultCountUpBoard";
 import type { ElectionResults } from "@/server/types";
 
 /**
@@ -77,51 +78,19 @@ export function WinnerAnnouncement({ results }: { results: ElectionResults }) {
         )}
       </Box>
 
-      {/* 후보별 득표 */}
+      {/* 후보별 득표 — 개표 카운트업 */}
       <Box>
-        <Text
-          fontSize="xs"
-          fontWeight={800}
-          color="fg.muted"
-          letterSpacing="0.14em"
-          textTransform="uppercase"
-          mb={4}
-        >
-          후보별 득표
-        </Text>
-        <Stack gap={4}>
-          {results.perCandidate.map((c) => {
-            const isWinner = results.winnerIds.includes(c.candidateId);
-            return (
-              <Box key={c.candidateId}>
-                <Flex justify="space-between" align="baseline" mb={1.5}>
-                  <Text fontWeight={isWinner ? 800 : 600}>
-                    {c.name}
-                    {isWinner && (
-                      <Text as="span" ml={2} fontSize="xs" color="stamp.700" fontWeight={800}>
-                        {results.isTie ? "동률" : "당선"}
-                      </Text>
-                    )}
-                  </Text>
-                  <Text fontFamily="heading" fontWeight={700}>
-                    {c.votes}표{" "}
-                    <Text as="span" fontSize="sm" color="fg.muted" fontWeight={500}>
-                      ({c.percent}%)
-                    </Text>
-                  </Text>
-                </Flex>
-                <Box h="12px" bg="paper.200" borderRadius="2px" border="1px solid" borderColor="paper.300" overflow="hidden">
-                  <Box
-                    h="100%"
-                    w={`${c.percent}%`}
-                    style={{ backgroundColor: c.colorHint?.trim() || undefined }}
-                    bg={c.colorHint?.trim() ? undefined : isWinner ? "booth.600" : "ink.300"}
-                  />
-                </Box>
-              </Box>
-            );
-          })}
-        </Stack>
+        <ResultCountUpBoard
+          isTie={results.isTie}
+          items={results.perCandidate.map((c) => ({
+            candidateId: c.candidateId,
+            name: c.name,
+            votes: c.votes,
+            percent: c.percent,
+            colorHint: c.colorHint,
+            isWinner: results.winnerIds.includes(c.candidateId),
+          }))}
+        />
         {results.unmatchedBallots > 0 && (
           <Text mt={4} fontSize="xs" color="fg.subtle">
             후보 매칭이 불가능한 표 {results.unmatchedBallots}건은 무효표로
@@ -153,6 +122,74 @@ export function WinnerAnnouncement({ results }: { results: ElectionResults }) {
           않았습니다. 검수 완료 후 결과가 갱신될 수 있습니다.
         </Text>
       )}
+
+      {/* 낙선자 예우 — 아름다운 경쟁 */}
+      {results.totalBallots > 0 &&
+        results.perCandidate.some((c) => !results.winnerIds.includes(c.candidateId)) && (
+          <Box
+            bg="bg.surface"
+            border="1px solid"
+            borderColor="border.default"
+            boxShadow="paper"
+            borderRadius="2px"
+            p={{ base: 5, md: 6 }}
+          >
+            <Text
+              fontSize="xs"
+              fontWeight={800}
+              color="fg.muted"
+              letterSpacing="0.14em"
+              textTransform="uppercase"
+              mb={4}
+              textAlign="center"
+            >
+              아름다운 경쟁
+            </Text>
+            <Stack gap={3}>
+              {results.perCandidate
+                .filter((c) => !results.winnerIds.includes(c.candidateId))
+                .map((c) => (
+                  <Flex key={c.candidateId} align="center" gap={3} justify="center" wrap="wrap">
+                    {/* 리본 배지 */}
+                    <Box
+                      aria-hidden
+                      px={2.5}
+                      py={0.5}
+                      bg="booth.100"
+                      color="booth.700"
+                      fontSize="2xs"
+                      fontWeight={800}
+                      borderRadius="sm"
+                      position="relative"
+                      _after={{
+                        content: '""',
+                        position: "absolute",
+                        right: "-6px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        borderTop: "9px solid transparent",
+                        borderBottom: "9px solid transparent",
+                        borderLeft: "6px solid var(--chakra-colors-booth-100)",
+                      }}
+                    >
+                      수고하셨습니다
+                    </Box>
+                    <Text fontFamily="heading" fontWeight={700}>
+                      {c.name}
+                    </Text>
+                    {c.slogan && (
+                      <Text fontSize="sm" color="fg.muted">
+                        “{c.slogan}”
+                      </Text>
+                    )}
+                  </Flex>
+                ))}
+            </Stack>
+            <Text mt={4} fontSize="xs" color="fg.subtle" textAlign="center">
+              용기 있는 출마와 멋진 공약, 우리 방의 역사에 남습니다.
+            </Text>
+          </Box>
+        )}
     </Stack>
   );
 }
