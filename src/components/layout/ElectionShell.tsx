@@ -1,4 +1,4 @@
-import { Box, Container, Flex, Link, Text } from "@chakra-ui/react";
+import { Box, Container, Flex, Link, Stack, Text } from "@chakra-ui/react";
 
 /**
  * 투표소 공통 셸.
@@ -63,10 +63,22 @@ export function ElectionShell({
 
       <Box as="footer" borderTop="1px solid" borderColor="border.default">
         <Container maxW={maxW} py={5}>
-          <Text fontSize="xs" color="fg.subtle" textAlign="center">
-            이 투표소는 비밀투표 원칙을 따릅니다 — 선택값은 투표권 정보와
-            분리되어 봉인 저장되며, 관리자도 개별 투표 내역을 볼 수 없습니다.
-          </Text>
+          <Stack gap={1.5}>
+            <Text
+              fontSize="sm"
+              fontFamily="heading"
+              fontWeight={700}
+              color="ink.700"
+              textAlign="center"
+            >
+              가장 신뢰할 수 있는 전자투표 시스템으로 유권자의 권익을
+              수호합니다.
+            </Text>
+            <Text fontSize="xs" color="fg.subtle" textAlign="center">
+              이 투표소는 비밀투표 원칙을 따릅니다 — 선택값은 투표권 정보와
+              분리되어 봉인 저장되며, 관리자도 개별 투표 내역을 볼 수 없습니다.
+            </Text>
+          </Stack>
         </Container>
       </Box>
     </Flex>
