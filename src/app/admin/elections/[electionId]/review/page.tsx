@@ -113,7 +113,8 @@ export default async function ReviewAdminPage({
           </Box>
         ) : (
           <Box overflowX="auto">
-            <Table.Root size="sm" bg="bg.surface" borderRadius="2px" border="1px solid" borderColor="border.default">
+            {/* 모바일: 칼럼이 뭉개지지 않도록 최소 폭을 주고 가로 스크롤 */}
+            <Table.Root size="sm" minW="640px" bg="bg.surface" borderRadius="2px" border="1px solid" borderColor="border.default">
               <Table.Header>
                 <Table.Row bg="bg.sunken">
                   <Table.ColumnHeader>이름</Table.ColumnHeader>
@@ -154,7 +155,7 @@ export default async function ReviewAdminPage({
                           </Text>
                         )}
                       </Table.Cell>
-                      <Table.Cell fontSize="xs" color="fg.muted">
+                      <Table.Cell fontSize="xs" color="fg.muted" whiteSpace="nowrap">
                         {formatDateTime(s.submittedAt)}
                       </Table.Cell>
                       <Table.Cell>
@@ -200,7 +201,7 @@ export default async function ReviewAdminPage({
                             </form>
                           </Flex>
                         ) : (
-                          <Text fontSize="xs" color="fg.subtle">
+                          <Text fontSize="xs" color="fg.subtle" whiteSpace="nowrap">
                             {s.reviewedAt ? formatDateTime(s.reviewedAt) : "—"}
                           </Text>
                         )}

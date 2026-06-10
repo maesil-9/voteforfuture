@@ -31,6 +31,7 @@ import {
   rejectSubmission,
 } from "../services/review";
 import { deleteOgImage, setOgImage } from "../sql/og";
+import { parseKstDatetimeLocal } from "@/lib/format";
 import type { ElectionStatus } from "../types";
 
 /**
@@ -89,9 +90,12 @@ export async function saveElectionAction(
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
   const status = String(formData.get("status") ?? "draft") as ElectionStatus;
-  const startsAt = new Date(String(formData.get("startsAt") ?? ""));
-  const endsAt = new Date(String(formData.get("endsAt") ?? ""));
-  const resultVisibleAt = new Date(String(formData.get("resultVisibleAt") ?? ""));
+  // 일정 입력은 서버 타임존과 무관하게 항상 KST 기준으로 해석한다
+  const startsAt = parseKstDatetimeLocal(String(formData.get("startsAt") ?? ""));
+  const endsAt = parseKstDatetimeLocal(String(formData.get("endsAt") ?? ""));
+  const resultVisibleAt = parseKstDatetimeLocal(
+    String(formData.get("resultVisibleAt") ?? ""),
+  );
   const maxVoters = Number(formData.get("maxVoters") ?? 0) || 0;
 
   if (!title) return { error: "선거명을 입력해주세요." };

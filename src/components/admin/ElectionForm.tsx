@@ -3,7 +3,7 @@
 import { Box, Grid, Input, NativeSelect, chakra, Textarea } from "@chakra-ui/react";
 import { ActionForm } from "./ActionForm";
 import { saveElectionAction } from "@/server/actions/admin";
-import { toDatetimeLocalValue } from "@/lib/format";
+import { toKstDatetimeLocalValue } from "@/lib/format";
 import type { Election } from "@/server/types";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -43,34 +43,34 @@ export function ElectionForm({ election }: { election?: Election }) {
       </Field>
 
       <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
-        <Field label="투표 시작" htmlFor="el-starts">
+        <Field label="투표 시작 (한국 시간)" htmlFor="el-starts">
           <Input
             id="el-starts"
             name="startsAt"
             type="datetime-local"
             required
-            defaultValue={election ? toDatetimeLocalValue(election.startsAt) : ""}
+            defaultValue={election ? toKstDatetimeLocalValue(election.startsAt) : ""}
             bg="bg.surface"
           />
         </Field>
-        <Field label="투표 종료" htmlFor="el-ends">
+        <Field label="투표 종료 (한국 시간)" htmlFor="el-ends">
           <Input
             id="el-ends"
             name="endsAt"
             type="datetime-local"
             required
-            defaultValue={election ? toDatetimeLocalValue(election.endsAt) : ""}
+            defaultValue={election ? toKstDatetimeLocalValue(election.endsAt) : ""}
             bg="bg.surface"
           />
         </Field>
-        <Field label="결과 발표" htmlFor="el-result">
+        <Field label="결과 발표 (한국 시간)" htmlFor="el-result">
           <Input
             id="el-result"
             name="resultVisibleAt"
             type="datetime-local"
             required
             defaultValue={
-              election ? toDatetimeLocalValue(election.resultVisibleAt) : ""
+              election ? toKstDatetimeLocalValue(election.resultVisibleAt) : ""
             }
             bg="bg.surface"
           />

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Box, Stack, Text } from "@chakra-ui/react";
+import NextLink from "next/link";
+import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { ElectionShell } from "@/components/layout/ElectionShell";
 import { ResultLockPanel } from "@/components/election/ResultLockPanel";
 import { WinnerAnnouncement } from "@/components/election/WinnerAnnouncement";
@@ -48,6 +49,7 @@ export default async function ResultsPage({
   }
 
   const visible = isResultVisible(election);
+  const results = visible ? await aggregateResults(election) : null;
 
   return (
     <ElectionShell>
@@ -61,8 +63,26 @@ export default async function ResultsPage({
           </Text>
         </Box>
 
-        {visible ? (
-          <WinnerAnnouncement results={await aggregateResults(election)} />
+        {results ? (
+          <>
+            <WinnerAnnouncement results={results} />
+            {results.messagesByCandidate.length > 0 && (
+              <Flex justify="center">
+                <Button
+                  asChild
+                  size="lg"
+                  bg="ink.900"
+                  color="paper.50"
+                  _hover={{ bg: "ink.700" }}
+                  fontWeight={700}
+                >
+                  <NextLink href={`/results/${electionId}/replay`}>
+                    🎬 한 마디 상영관 입장
+                  </NextLink>
+                </Button>
+              </Flex>
+            )}
+          </>
         ) : (
           <ResultLockPanel
             election={election}

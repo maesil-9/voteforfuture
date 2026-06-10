@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Stack, Text } from "@chakra-ui/react";
+import NextLink from "next/link";
+import { Button, Stack, Text } from "@chakra-ui/react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ElectionTabs } from "@/components/admin/ElectionTabs";
 import { AdminSealPanel } from "@/components/admin/AdminSealPanel";
@@ -45,6 +46,21 @@ export default async function ResultsAdminPage({
           <>
             <WinnerAnnouncement results={results} />
             <MessageWall messages={results.messages} />
+            {results.messagesByCandidate.length > 0 && (
+              <Button
+                asChild
+                alignSelf="flex-start"
+                size="sm"
+                bg="ink.900"
+                color="paper.50"
+                _hover={{ bg: "ink.700" }}
+                fontWeight={700}
+              >
+                <NextLink href={`/results/${electionId}/replay`}>
+                  🎬 한 마디 상영관 열기 (공유용 페이지)
+                </NextLink>
+              </Button>
+            )}
           </>
         ) : (
           <AdminSealPanel election={election} />

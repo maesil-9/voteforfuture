@@ -30,6 +30,9 @@ export async function aggregateResults(
   const counts = new Map<string, number>(candidates.map((c) => [c.id, 0]));
   let unmatchedBallots = 0;
   const messages: string[] = [];
+  const messagesPerCandidate = new Map<string, string[]>(
+    candidates.map((c) => [c.id, []]),
+  );
 
   for (const sealed of sealedBallots) {
     const choice = unsealChoice(sealed, {
@@ -44,11 +47,15 @@ export async function aggregateResults(
     counts.set(choice.candidateId, (counts.get(choice.candidateId) ?? 0) + 1);
     if (choice.message) {
       messages.push(choice.message);
+      messagesPerCandidate.get(choice.candidateId)?.push(choice.message);
     }
   }
 
   // 제출 순서와의 상관관계를 끊기 위해 텍스트 기준 정렬
   messages.sort((a, b) => a.localeCompare(b, "ko"));
+  for (const list of messagesPerCandidate.values()) {
+    list.sort((a, b) => a.localeCompare(b, "ko"));
+  }
 
   const totalBallots = sealedBallots.length;
   const maxVotes = Math.max(0, ...counts.values());
@@ -57,7 +64,24 @@ export async function aggregateResults(
       ? []
       : candidates.filter((c) => counts.get(c.id) === maxVotes).map((c) => c.id);
 
+  // 상영관용: 득표 오름차순 (당선자가 마지막에 재생되도록)
+  const messagesByCandidate = candidates
+    .map((c) => ({
+      candidateId: c.id,
+      name: c.name,
+      slogan: c.slogan,
+      colorHint: c.colorHint,
+      isWinner: winnerIds.includes(c.id),
+      messages: messagesPerCandidate.get(c.id) ?? [],
+    }))
+    .filter((c) => c.messages.length > 0)
+    .sort(
+      (a, b) =>
+        (counts.get(a.candidateId) ?? 0) - (counts.get(b.candidateId) ?? 0),
+    );
+
   return {
+    messagesByCandidate,
     totalBallots,
     totalSubmitted: participation.submitted,
     pendingCount: participation.pending,

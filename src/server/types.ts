@@ -88,4 +88,16 @@ export type ElectionResults = {
    * 제출 순서와의 상관관계를 끊기 위해 텍스트 기준으로 정렬되어 있다.
    */
   messages: string[];
+  /**
+   * 후보별 익명 메시지 (결과 공개 후 상영관 페이지용).
+   * 득표 오름차순 — 당선자가 마지막에 재생되도록.
+   */
+  messagesByCandidate: {
+    candidateId: string;
+    name: string;
+    slogan: string | null;
+    colorHint: string | null;
+    isWinner: boolean;
+    messages: string[];
+  }[];
 };
