@@ -1,3 +1,5 @@
+"use client";
+
 import { Box, Grid, Input, NativeSelect, chakra, Textarea } from "@chakra-ui/react";
 import { ActionForm } from "./ActionForm";
 import { saveElectionAction } from "@/server/actions/admin";
