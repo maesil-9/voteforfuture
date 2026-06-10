@@ -1,8 +1,8 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { SealedStatus } from "./SealedStatus";
-import { TurnoutGauge } from "./TurnoutGauge";
+import { ParticipationLive } from "./ParticipationLive";
 import { formatDateTime } from "@/lib/format";
-import type { Election, Turnout } from "@/server/types";
+import type { Election, Participation } from "@/server/types";
 
 /**
  * 결과 발표 전 잠금 패널.
@@ -11,10 +11,10 @@ import type { Election, Turnout } from "@/server/types";
  */
 export function ResultLockPanel({
   election,
-  turnout,
+  participation,
 }: {
   election: Election;
-  turnout: Turnout;
+  participation: Participation;
 }) {
   return (
     <Stack gap={8} maxW="lg" mx="auto" w="100%">
@@ -44,7 +44,11 @@ export function ResultLockPanel({
         borderRadius="2px"
         p={{ base: 6, md: 8 }}
       >
-        <TurnoutGauge turnout={turnout} caption="투표율 (공개 가능 정보)" />
+        <ParticipationLive
+          electionId={election.id}
+          initial={participation}
+          caption="투표 현황 (공개 가능 정보)"
+        />
       </Box>
     </Stack>
   );

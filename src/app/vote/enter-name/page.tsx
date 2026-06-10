@@ -1,15 +1,15 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { ElectionShell } from "@/components/layout/ElectionShell";
-import { CodeInvitationPanel } from "@/components/vote/CodeInvitationPanel";
+import { NameEntryPanel } from "@/components/vote/NameEntryPanel";
 import { getLatestPublicElection } from "@/server/sql/elections";
 import { getElectionPhase } from "@/server/guards/election-state";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "투표 코드 입력" };
+export const metadata = { title: "투표소 입장" };
 
-export default async function EnterCodePage({
+export default async function EnterNamePage({
   searchParams,
 }: {
   searchParams: Promise<{ expired?: string; already?: string }>;
@@ -20,7 +20,7 @@ export default async function EnterCodePage({
   if (!election) {
     return (
       <ElectionShell>
-        <Notice title="지금은 진행 중인 선거가 없습니다" body="선거가 공고되면 코드 입력이 가능해집니다." />
+        <Notice title="지금은 진행 중인 선거가 없습니다" body="선거가 공고되면 투표가 가능해집니다." />
       </ElectionShell>
     );
   }
@@ -50,9 +50,9 @@ export default async function EnterCodePage({
   }
 
   const initialError = params.already
-    ? "이미 투표가 완료된 코드입니다."
+    ? "이미 같은 이름으로 투표가 접수되었습니다."
     : params.expired
-      ? "세션이 만료되었습니다. 코드를 다시 입력해주세요."
+      ? "세션이 만료되었습니다. 이름을 다시 입력해주세요."
       : undefined;
 
   return (
@@ -66,10 +66,10 @@ export default async function EnterCodePage({
             투표소 입장
           </Text>
           <Text mt={2} color="fg.muted" fontSize="sm">
-            안내받은 개인 투표 코드를 입력하면 기표소로 이동합니다.
+            방에서 쓰는 닉네임을 적으면 기표소로 이동합니다.
           </Text>
         </Box>
-        <CodeInvitationPanel electionId={election.id} initialError={initialError} />
+        <NameEntryPanel electionId={election.id} initialError={initialError} />
       </Stack>
     </ElectionShell>
   );

@@ -4,8 +4,8 @@ import { Flex, Link } from "@chakra-ui/react";
 const TABS = [
   { slug: "", label: "개요" },
   { slug: "/candidates", label: "후보" },
-  { slug: "/voters", label: "유권자" },
-  { slug: "/turnout", label: "투표율" },
+  { slug: "/review", label: "검수" },
+  { slug: "/turnout", label: "현황" },
   { slug: "/results", label: "결과" },
 ];
 
@@ -14,7 +14,7 @@ export function ElectionTabs({
   active,
 }: {
   electionId: string;
-  active: "" | "/candidates" | "/voters" | "/turnout" | "/results";
+  active: "" | "/candidates" | "/review" | "/turnout" | "/results";
 }) {
   return (
     <Flex

@@ -6,7 +6,7 @@ import { PhaseBadge } from "@/components/admin/PhaseBadge";
 import { SealedStatus } from "@/components/election/SealedStatus";
 import { requireAdmin } from "@/server/auth/admin-session";
 import { listElections } from "@/server/sql/elections";
-import { getTurnout } from "@/server/sql/voters";
+import { getParticipation } from "@/server/sql/submissions";
 import { getElectionPhase } from "@/server/guards/election-state";
 import { isResultVisible } from "@/server/guards/result-visibility";
 import { formatDateTime } from "@/lib/format";
@@ -19,7 +19,7 @@ export default async function AdminDashboardPage() {
   const session = await requireAdmin();
   const elections = await listElections();
   const current = elections.find((e) => getElectionPhase(e) === "open") ?? elections[0];
-  const turnout = current ? await getTurnout(current.id) : null;
+  const participation = current ? await getParticipation(current.id) : null;
 
   return (
     <AdminShell adminEmail={session.email}>
@@ -33,7 +33,7 @@ export default async function AdminDashboardPage() {
           </Button>
         </Flex>
 
-        {current && turnout ? (
+        {current && participation ? (
           <Stack gap={4}>
             <Flex align="center" gap={3} wrap="wrap">
               <Text fontFamily="heading" fontWeight={700} fontSize="lg">
@@ -48,10 +48,10 @@ export default async function AdminDashboardPage() {
             </Flex>
             <AdminMetricStrip
               metrics={[
-                { label: "총 유권자", value: `${turnout.totalVoters}명` },
-                { label: "투표 완료", value: `${turnout.votesCast}명` },
-                { label: "남은 투표", value: `${turnout.remaining}명` },
-                { label: "투표율", value: `${turnout.percent}%` },
+                { label: "투표 접수", value: `${participation.submitted}명` },
+                { label: "승인된 표", value: `${participation.approved}명` },
+                { label: "검수 대기", value: `${participation.pending}명` },
+                { label: "무효 처리", value: `${participation.rejected}명` },
               ]}
             />
             <Flex gap={2}>
@@ -59,7 +59,7 @@ export default async function AdminDashboardPage() {
                 <NextLink href={`/admin/elections/${current.id}`}>선거 관리로 이동</NextLink>
               </Button>
               <Button asChild size="xs" variant="outline" borderColor="ink.700" color="ink.900">
-                <NextLink href={`/admin/elections/${current.id}/turnout`}>실시간 투표율</NextLink>
+                <NextLink href={`/admin/elections/${current.id}/review`}>투표 검수</NextLink>
               </Button>
             </Flex>
           </Stack>
@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
         {/* 시스템이 보장하는 것 안내 */}
         <Box bg="bg.sunken" border="1px dashed" borderColor="ink.300" borderRadius="sm" p={5}>
           <Flex gap={5} align="center" direction={{ base: "column", md: "row" }}>
-            <SealedStatus label="이 백오피스가 볼 수 없는 것" sublabel="개별 유권자의 투표 여부 · 투표 선택 · 코드 원문" />
+            <SealedStatus label="이 백오피스가 볼 수 없는 것" sublabel="개별 유권자의 투표 선택 — 검수에서도 이름만 보이고 표의 내용은 봉인됩니다" />
           </Flex>
         </Box>
       </Stack>

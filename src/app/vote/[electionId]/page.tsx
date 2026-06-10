@@ -23,12 +23,12 @@ export default async function BoothPage({
 
   const session = await getVoterSession(electionId);
   if (!session) {
-    redirect("/vote/enter-code?expired=1");
+    redirect("/vote/enter-name?expired=1");
   }
 
   const election = await getElection(electionId);
   if (!election) {
-    redirect("/vote/enter-code");
+    redirect("/vote/enter-name");
   }
   if (getElectionPhase(election) !== "open") {
     redirect("/");

@@ -3,8 +3,9 @@
  * 상태별 데모 선거를 추가로 생성한다 (UI 상태 확인용).
  */
 import "./lib/bootstrap";
-import { closePool } from "../src/server/db";
-import { createDemoElection } from "./lib/demo-data";
+import { closePool, query } from "../src/server/db";
+import { createDemoElection, createDemoSubmissions } from "./lib/demo-data";
+import { updateElection } from "../src/server/sql/elections";
 
 async function main() {
   const mode = (process.argv[2] ?? "--open").replace(/^--/, "");
@@ -48,19 +49,39 @@ async function main() {
     return;
   }
 
-  const { election, codes } = await createDemoElection({
+  // 데모 제출을 위해 일단 open 상태로 만들고, 제출 후 원하는 일정으로 되돌린다
+  const needsSubmissions = mode !== "upcoming";
+  const { election, candidateIds } = await createDemoElection({
     title: `[침착한 일상 이야기방] 방장 선거 (데모: ${preset.label})`,
     status: "scheduled",
-    startsAt: preset.startsAt,
-    endsAt: preset.endsAt,
-    resultVisibleAt: preset.resultVisibleAt,
-    voterCount: 10,
-    batchName: `데모 명부 (${preset.label})`,
+    startsAt: needsSubmissions ? new Date(now - 1 * hour) : preset.startsAt,
+    endsAt: needsSubmissions ? new Date(now + 1 * hour) : preset.endsAt,
+    resultVisibleAt: needsSubmissions
+      ? new Date(now + 2 * hour)
+      : preset.resultVisibleAt,
+    expectedVoters: 10,
   });
+
+  if (needsSubmissions) {
+    const { rows } = await query<{ id: string }>("select id from admins limit 1");
+    if (!rows[0]) {
+      throw new Error("관리자 계정이 없습니다. 먼저 pnpm seed:demo 또는 admin:create를 실행하세요.");
+    }
+    await createDemoSubmissions(election.id, candidateIds, rows[0].id, 5);
+
+    await updateElection(election.id, {
+      title: election.title,
+      description: election.description,
+      status: "scheduled",
+      startsAt: preset.startsAt,
+      endsAt: preset.endsAt,
+      resultVisibleAt: preset.resultVisibleAt,
+      maxVoters: election.maxVoters,
+    });
+  }
 
   console.log(`생성 완료: ${election.title}`);
   console.log(`  id: ${election.id}`);
-  console.log(`  코드 5개: ${codes.slice(0, 5).join(", ")}`);
 }
 
 main()

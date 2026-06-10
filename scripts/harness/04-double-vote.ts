@@ -1,52 +1,74 @@
 /**
  * Harness 4: Double Vote Harness
- * 같은 코드의 두 번째 투표가 DB unique constraint로 막히는지 검증한다.
+ * 같은 이름의 두 번째 투표가 DB unique index로 막히고,
+ * 무효 처리 후에만 재투표가 가능한지 검증한다.
  */
 import "../lib/bootstrap";
 import { query, closePool } from "../../src/server/db";
 import { submitVote } from "../../src/server/services/vote";
-import { hashCode } from "../../src/server/crypto/code-hash";
-import { check, finish, makeTestElection } from "./lib/util";
+import { approveSubmission, rejectSubmission } from "../../src/server/services/review";
+import { check, finish, makeTestAdmin, makeTestElection } from "./lib/util";
 
 async function main() {
   console.log("[Harness 4] Double Vote");
 
-  const { election, candidateIds, codes } = await makeTestElection({
+  const { election, candidateIds } = await makeTestElection({
     title: "중복투표 하네스",
-    voterCount: 2,
     resultVisibleAt: new Date(Date.now() + 86400_000),
   });
-  const codeHash = hashCode(codes[0]);
+  const adminId = await makeTestAdmin("double-harness@calmvote.local");
+  const voterName = "중복테스터";
 
   // 1. 첫 번째 투표 성공
   const first = await submitVote({
     electionId: election.id,
-    codeHash,
+    voterName,
     candidateId: candidateIds[0],
   });
   check("첫 번째 투표 성공", first.ok);
+  if (!first.ok) throw new Error("중단");
 
-  // 2~3. 같은 코드 두 번째 투표 → unique constraint로 실패
+  // 2~3. 같은 이름(공백/대소문자 변형 포함) 두 번째 투표 → 차단
   const second = await submitVote({
     electionId: election.id,
-    codeHash,
+    voterName: ` ${voterName}  `,
+    candidateId: candidateIds[1],
+  });
+  check("두 번째 투표 차단 (duplicate)", !second.ok && second.reason === "duplicate");
+
+  // 4. 승인 후에도 같은 이름 재투표 차단
+  await approveSubmission(first.submissionId, adminId);
+  const afterApprove = await submitVote({
+    electionId: election.id,
+    voterName,
     candidateId: candidateIds[1],
   });
   check(
-    "두 번째 투표 차단 (already_voted)",
-    !second.ok && second.reason === "already_voted",
-  );
-  check(
-    "차단 메시지: 이미 투표가 완료된 코드입니다.",
-    !second.ok && second.message === "이미 투표가 완료된 코드입니다.",
+    "승인 후에도 같은 이름 재투표 차단",
+    !afterApprove.ok && afterApprove.reason === "duplicate",
   );
 
-  // 4. ballots row가 1개만 존재
+  // 5. ballots row가 1개만 존재
   const { rows } = await query<{ count: string }>(
     "select count(*) as count from ballots where election_id = $1",
     [election.id],
   );
   check("ballot은 정확히 1개", rows[0].count === "1");
+
+  // 6. 별도 사례: 무효 처리된 이름은 재투표 가능
+  const troll = await submitVote({
+    electionId: election.id,
+    voterName: "오타낸사람",
+    candidateId: candidateIds[0],
+  });
+  if (!troll.ok) throw new Error("중단");
+  await rejectSubmission(troll.submissionId, adminId, "잘못 입력");
+  const retry = await submitVote({
+    electionId: election.id,
+    voterName: "오타낸사람",
+    candidateId: candidateIds[1],
+  });
+  check("무효 처리 후 같은 이름 재투표 가능", retry.ok);
 
   finish("Harness 4");
 }

@@ -22,28 +22,24 @@ async function main() {
     "candidates",
     "candidate_posters",
     "candidate_policies",
-    "voter_batches",
-    "voter_credentials",
-    "used_credentials",
+    "vote_submissions",
     "ballots",
     "audit_logs",
-    "code_entry_attempts",
+    "entry_attempts",
+    "og_images",
   ]) {
     check(`테이블 ${t} 존재`, tables.includes(t));
   }
+  for (const dropped of ["voter_credentials", "used_credentials", "voter_batches"]) {
+    check(`구 테이블 ${dropped} 제거됨`, !tables.includes(dropped));
+  }
 
-  // 비밀투표 핵심: ballots / used_credentials에 유권자 연결 컬럼이 없어야 한다
+  // 비밀투표 핵심: ballots에 유권자/이름 연결 컬럼이 없어야 한다
   const ballotCols = await columnNames("ballots");
   check(
-    "ballots에 voter/code/credential 컬럼 없음",
-    !ballotCols.some((c) => /voter|code|credential|candidate/.test(c)),
+    "ballots에 voter/name/submission 컬럼 없음",
+    !ballotCols.some((c) => /voter|name|submission|candidate/.test(c)),
     `columns: ${ballotCols.join(", ")}`,
-  );
-  const usedCols = await columnNames("used_credentials");
-  check(
-    "used_credentials에 candidate 컬럼 없음",
-    !usedCols.some((c) => /candidate|choice|ballot/.test(c)),
-    `columns: ${usedCols.join(", ")}`,
   );
 
   // fixture
@@ -54,37 +50,41 @@ async function main() {
   );
   const electionId = elections[0].id;
 
-  // unique(election_id, code_hash)
+  // 같은 이름의 활성 제출 중복 차단 (부분 유니크 인덱스)
   await query(
-    "insert into voter_credentials (election_id, code_hash) values ($1, 'dup-hash')",
+    `insert into vote_submissions (election_id, voter_name, name_normalized, sealed_choice, iv, auth_tag)
+     values ($1, '중복이', '중복이', 'x', 'x', 'x')`,
     [electionId],
   );
   let uniqueBlocked = false;
   try {
     await query(
-      "insert into voter_credentials (election_id, code_hash) values ($1, 'dup-hash')",
+      `insert into vote_submissions (election_id, voter_name, name_normalized, sealed_choice, iv, auth_tag)
+       values ($1, '중복이', '중복이', 'y', 'y', 'y')`,
       [electionId],
     );
   } catch (e) {
     uniqueBlocked = isUniqueViolation(e);
   }
-  check("voter_credentials unique(election_id, code_hash) 작동", uniqueBlocked);
+  check("같은 이름 활성 제출 중복 차단 (unique index)", uniqueBlocked);
 
-  // used_credentials PK
+  // 무효 처리 후에는 같은 이름으로 재제출 가능
   await query(
-    "insert into used_credentials (election_id, code_hash) values ($1, 'used-hash')",
+    `update vote_submissions set status = 'rejected', sealed_choice = null, iv = null, auth_tag = null
+      where election_id = $1 and name_normalized = '중복이'`,
     [electionId],
   );
-  let pkBlocked = false;
+  let resubmitOk = true;
   try {
     await query(
-      "insert into used_credentials (election_id, code_hash) values ($1, 'used-hash')",
+      `insert into vote_submissions (election_id, voter_name, name_normalized, sealed_choice, iv, auth_tag)
+       values ($1, '중복이', '중복이', 'z', 'z', 'z')`,
       [electionId],
     );
-  } catch (e) {
-    pkBlocked = isUniqueViolation(e);
+  } catch {
+    resubmitOk = false;
   }
-  check("used_credentials primary key 작동", pkBlocked);
+  check("무효 처리 후 같은 이름 재제출 가능", resubmitOk);
 
   // candidate 종속 + cascade
   const { rows: cands } = await query<{ id: string }>(
@@ -116,11 +116,11 @@ async function main() {
 
   // election cascade
   await query("delete from elections where id = $1", [electionId]);
-  const { rows: orphanCreds } = await query<{ count: string }>(
-    "select count(*) as count from voter_credentials where election_id = $1",
+  const { rows: orphanSubmissions } = await query<{ count: string }>(
+    "select count(*) as count from vote_submissions where election_id = $1",
     [electionId],
   );
-  check("선거 삭제 시 크레덴셜 cascade delete", orphanCreds[0].count === "0");
+  check("선거 삭제 시 제출 cascade delete", orphanSubmissions[0].count === "0");
 
   // 포스터 3MB 제한 (DB check constraint)
   let sizeBlocked = false;

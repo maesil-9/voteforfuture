@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function VotePage() {
-  redirect("/vote/enter-code");
+  redirect("/vote/enter-name");
 }

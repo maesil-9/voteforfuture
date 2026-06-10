@@ -24,9 +24,6 @@ export const env = {
   get adminSessionSecret(): string {
     return required("ADMIN_SESSION_SECRET");
   },
-  get voterCodeSecret(): string {
-    return required("VOTER_CODE_SECRET");
-  },
   get resultSealingKey(): string {
     return required("RESULT_SEALING_KEY");
   },

@@ -1,42 +1,37 @@
 import crypto from "node:crypto";
-import { isUniqueViolation, query, withTransaction } from "../db";
-import { hashCode } from "../crypto/code-hash";
+import { isUniqueViolation, query } from "../db";
 import { sealChoice } from "../crypto/ballot-sealing";
 import { assertVotingOpen, getElectionPhase } from "../guards/election-state";
 import { getElection } from "../sql/elections";
 import { getCandidate } from "../sql/candidates";
-import { checkCredentialStatus, findCredentialInTx } from "../sql/voters";
-import { insertBallotInTx } from "../sql/ballots";
+import { hasActiveSubmission, insertSubmission } from "../sql/submissions";
 
 /**
- * 투표 서비스.
+ * 투표 서비스 (이름 기반).
  *
- * 핵심 설계: "투표권 사용"(used_credentials)과 "투표 선택값"(ballots)은
- * 같은 트랜잭션 안에서 기록되지만 서로를 참조하는 컬럼이 없다.
- * 트랜잭션이 보장하는 것은 원자성(둘 다 기록되거나 둘 다 안 되거나)뿐이며,
- * 사후에 둘을 연결할 수 있는 데이터는 남지 않는다.
+ * - 유권자는 이름(닉네임)을 입력하고 투표한다.
+ * - 제출 시 선택값은 즉시 AES-256-GCM으로 봉인되어 vote_submissions에
+ *   임시 보관된다. 앱은 이 값을 복호화할 수 없다 (개표 가드와 동일).
+ * - 같은 이름의 활성 제출은 부분 유니크 인덱스가 DB 레벨에서 차단한다.
+ * - 검수(승인/무효)는 review service가 담당하며, 승인 시 이름-표 연결이
+ *   파기된 채 익명 투표함으로 이동한다.
  */
 
-export type CodeCheckResult =
-  | { ok: true; codeHash: string }
-  | {
-      ok: false;
-      reason: "invalid" | "used" | "revoked" | "not_open" | "rate_limited";
-      message: string;
-    };
-
-const FRIENDLY: Record<string, string> = {
-  invalid: "잘못된 코드입니다. 코드를 다시 확인해주세요.",
-  used: "이미 투표가 완료된 코드입니다.",
-  revoked: "사용이 중지된 코드입니다. 관리자에게 문의해주세요.",
-  not_open_upcoming: "아직 투표가 시작되지 않았습니다.",
-  not_open_closed: "투표가 종료되었습니다.",
-  rate_limited: "시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+const FRIENDLY = {
+  emptyName: "이름(닉네임)을 입력해주세요.",
+  nameTooLong: "이름은 30자 이내로 입력해주세요.",
+  duplicate:
+    "이미 같은 이름으로 투표가 접수되었습니다. 본인이 투표한 적이 없다면 방장에게 알려주세요 — 검수에서 무효 처리 후 다시 투표할 수 있습니다.",
+  notOpenUpcoming: "아직 투표가 시작되지 않았습니다.",
+  notOpenClosed: "투표가 종료되었습니다.",
+  rateLimited: "시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+  invalidCandidate: "이 후보는 현재 투표할 수 없습니다.",
+  generic: "투표 처리 중 문제가 발생했습니다. 다시 시도해주세요.",
 };
 
-// ---------- 가벼운 rate limit (DB 기반, 서버리스에서도 동작) ----------
+// ---------- 가벼운 rate limit (DB 기반) ----------
 
-const MAX_FAILURES_PER_WINDOW = 10;
+const MAX_FAILURES_PER_WINDOW = 15;
 const WINDOW_MINUTES = 5;
 
 function hashIp(ip: string): string {
@@ -45,7 +40,7 @@ function hashIp(ip: string): string {
 
 async function isRateLimited(ipHash: string): Promise<boolean> {
   const { rows } = await query<{ count: string }>(
-    `select count(*) as count from code_entry_attempts
+    `select count(*) as count from entry_attempts
       where ip_hash = $1 and succeeded = false
         and attempted_at > now() - interval '${WINDOW_MINUTES} minutes'`,
     [ipHash],
@@ -55,34 +50,43 @@ async function isRateLimited(ipHash: string): Promise<boolean> {
 
 async function recordAttempt(ipHash: string, succeeded: boolean) {
   await query(
-    "insert into code_entry_attempts (ip_hash, succeeded) values ($1, $2)",
+    "insert into entry_attempts (ip_hash, succeeded) values ($1, $2)",
     [ipHash, succeeded],
   );
 }
 
-/** 실패 시 응답을 약간 지연시켜 brute-force 비용을 높인다 */
-function failureDelay(): Promise<void> {
-  return new Promise((r) => setTimeout(r, 400 + Math.random() * 400));
-}
+// ---------- 이름 입장 검증 ----------
 
-// ---------- 코드 검증 (입장 단계) ----------
+export type NameCheckResult =
+  | { ok: true; voterName: string }
+  | {
+      ok: false;
+      reason: "invalid" | "duplicate" | "not_open" | "rate_limited";
+      message: string;
+    };
 
-export async function verifyVoterCode(
+export async function verifyVoterName(
   electionId: string,
-  rawCode: string,
+  rawName: string,
   clientIp: string,
-): Promise<CodeCheckResult> {
+): Promise<NameCheckResult> {
   const ipHash = hashIp(clientIp);
-
   if (await isRateLimited(ipHash)) {
-    return { ok: false, reason: "rate_limited", message: FRIENDLY.rate_limited };
+    return { ok: false, reason: "rate_limited", message: FRIENDLY.rateLimited };
+  }
+
+  const voterName = rawName.trim().replace(/\s+/g, " ");
+  if (!voterName) {
+    return { ok: false, reason: "invalid", message: FRIENDLY.emptyName };
+  }
+  if (voterName.length > 30) {
+    return { ok: false, reason: "invalid", message: FRIENDLY.nameTooLong };
   }
 
   const election = await getElection(electionId);
   if (!election) {
     await recordAttempt(ipHash, false);
-    await failureDelay();
-    return { ok: false, reason: "invalid", message: FRIENDLY.invalid };
+    return { ok: false, reason: "invalid", message: FRIENDLY.generic };
   }
 
   const phase = getElectionPhase(election);
@@ -91,107 +95,84 @@ export async function verifyVoterCode(
       ok: false,
       reason: "not_open",
       message:
-        phase === "upcoming" ? FRIENDLY.not_open_upcoming : FRIENDLY.not_open_closed,
+        phase === "upcoming" ? FRIENDLY.notOpenUpcoming : FRIENDLY.notOpenClosed,
     };
   }
 
-  const codeHash = hashCode(rawCode);
-  const status = await checkCredentialStatus(electionId, codeHash);
-
-  if (status === "valid") {
-    await recordAttempt(ipHash, true);
-    return { ok: true, codeHash };
+  if (await hasActiveSubmission(electionId, voterName)) {
+    await recordAttempt(ipHash, false);
+    return { ok: false, reason: "duplicate", message: FRIENDLY.duplicate };
   }
 
-  await recordAttempt(ipHash, false);
-  await failureDelay();
-  const reason = status === "not_found" ? "invalid" : status;
-  return { ok: false, reason, message: FRIENDLY[reason] };
+  await recordAttempt(ipHash, true);
+  return { ok: true, voterName };
 }
 
 // ---------- 투표 제출 ----------
 
 export type SubmitVoteResult =
-  | { ok: true }
+  | { ok: true; submissionId: string }
   | {
       ok: false;
-      reason: "already_voted" | "invalid_code" | "invalid_candidate" | "not_open";
+      reason: "duplicate" | "invalid_name" | "invalid_candidate" | "not_open";
       message: string;
     };
 
 export async function submitVote(params: {
   electionId: string;
-  codeHash: string;
+  voterName: string;
   candidateId: string;
+  /** 투표와 함께 남기는 한 마디 (선택, 50자) */
+  message?: string;
 }): Promise<SubmitVoteResult> {
-  const { electionId, codeHash, candidateId } = params;
+  const { electionId, candidateId } = params;
+  const voterName = params.voterName.trim().replace(/\s+/g, " ");
+  const voterMessage = params.message?.trim().slice(0, 50) || undefined;
+
+  if (!voterName || voterName.length > 30) {
+    return { ok: false, reason: "invalid_name", message: FRIENDLY.emptyName };
+  }
 
   const election = await getElection(electionId);
   if (!election) {
-    return { ok: false, reason: "invalid_code", message: FRIENDLY.invalid };
+    return { ok: false, reason: "invalid_name", message: FRIENDLY.generic };
   }
 
-  // 후보가 이 선거 소속인지 확인
   const candidate = await getCandidate(candidateId);
   if (!candidate || candidate.electionId !== electionId) {
     return {
       ok: false,
       reason: "invalid_candidate",
-      message: "이 후보는 현재 투표할 수 없습니다.",
+      message: FRIENDLY.invalidCandidate,
     };
   }
 
   try {
-    await withTransaction(async (tx) => {
-      const credential = await findCredentialInTx(tx, electionId, codeHash);
-      if (!credential) {
-        throw new VoteError("invalid_code", FRIENDLY.invalid);
-      }
-      if (credential.isRevoked) {
-        throw new VoteError("invalid_code", FRIENDLY.revoked);
-      }
+    // 제출 시점 기준 투표 기간 재검증
+    assertVotingOpen(election);
 
-      // 투표 기간 재검증 (제출 시점 기준)
-      assertVotingOpen(election);
-
-      // 1) 투표권 사용 기록 — PK(election_id, code_hash)가 중복 투표를 차단한다.
-      //    candidate_id는 이 테이블에 존재하지 않는다.
-      await tx.query(
-        "insert into used_credentials (election_id, code_hash) values ($1, $2)",
-        [electionId, codeHash],
-      );
-
-      // 2) 봉인된 투표지 투입 — code hash / credential id를 절대 저장하지 않는다.
-      const sealed = sealChoice({ electionId, candidateId });
-      await insertBallotInTx(tx, electionId, sealed);
+    // 선택값(+메시지)을 즉시 봉인 — 이후 어떤 화면/로그에도 평문이 존재하지 않는다.
+    // 같은 이름의 활성 제출은 부분 유니크 인덱스가 차단한다.
+    const sealed = sealChoice({
+      electionId,
+      candidateId,
+      message: voterMessage,
     });
-    return { ok: true };
+    const submissionId = await insertSubmission(
+      electionId,
+      voterName,
+      sealed,
+      voterMessage !== undefined,
+    );
+    return { ok: true, submissionId };
   } catch (err) {
     if (isUniqueViolation(err)) {
-      return { ok: false, reason: "already_voted", message: FRIENDLY.used };
-    }
-    if (err instanceof VoteError) {
-      return { ok: false, reason: err.reason, message: err.message };
+      return { ok: false, reason: "duplicate", message: FRIENDLY.duplicate };
     }
     if (err instanceof Error && err.name === "VotingNotOpenError") {
       return { ok: false, reason: "not_open", message: err.message };
     }
-    // 내부 정보(SQL 에러 등)는 노출하지 않는다
     console.error("[vote] submit failed:", err);
-    return {
-      ok: false,
-      reason: "invalid_code",
-      message: "투표 처리 중 문제가 발생했습니다. 다시 시도해주세요.",
-    };
-  }
-}
-
-class VoteError extends Error {
-  constructor(
-    public reason: "invalid_code" | "invalid_candidate",
-    message: string,
-  ) {
-    super(message);
-    this.name = "VoteError";
+    return { ok: false, reason: "invalid_name", message: FRIENDLY.generic };
   }
 }

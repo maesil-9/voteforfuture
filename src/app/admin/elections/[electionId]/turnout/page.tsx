@@ -3,16 +3,16 @@ import { Box, Stack, Text } from "@chakra-ui/react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ElectionTabs } from "@/components/admin/ElectionTabs";
 import { AdminMetricStrip } from "@/components/admin/AdminMetricStrip";
-import { TurnoutLive } from "@/components/admin/TurnoutLive";
+import { ParticipationLive } from "@/components/election/ParticipationLive";
 import { requireAdmin } from "@/server/auth/admin-session";
 import { getElection } from "@/server/sql/elections";
-import { getTurnout } from "@/server/sql/voters";
+import { getParticipation } from "@/server/sql/submissions";
 import { isResultVisible } from "@/server/guards/result-visibility";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "투표율" };
+export const metadata = { title: "투표 현황" };
 
 export default async function TurnoutAdminPage({
   params,
@@ -25,22 +25,22 @@ export default async function TurnoutAdminPage({
   const election = await getElection(electionId);
   if (!election) notFound();
 
-  const turnout = await getTurnout(electionId);
+  const participation = await getParticipation(electionId);
 
   return (
     <AdminShell adminEmail={session.email}>
       <Stack gap={4}>
         <Text as="h1" fontFamily="heading" fontWeight={900} fontSize="2xl">
-          {election.title} — 투표율
+          {election.title} — 현황
         </Text>
         <ElectionTabs electionId={electionId} active="/turnout" />
 
         <AdminMetricStrip
           metrics={[
-            { label: "총 유권자", value: `${turnout.totalVoters}명` },
-            { label: "투표 완료", value: `${turnout.votesCast}명` },
-            { label: "남은 투표", value: `${turnout.remaining}명` },
-            { label: "투표율", value: `${turnout.percent}%` },
+            { label: "투표 접수", value: `${participation.submitted}명` },
+            { label: "승인된 표", value: `${participation.approved}명` },
+            { label: "검수 대기", value: `${participation.pending}명` },
+            { label: "무효 처리", value: `${participation.rejected}명` },
           ]}
         />
 
@@ -52,7 +52,11 @@ export default async function TurnoutAdminPage({
           borderRadius="2px"
           p={{ base: 5, md: 8 }}
         >
-          <TurnoutLive electionId={electionId} initial={turnout} />
+          <ParticipationLive
+            electionId={electionId}
+            initial={participation}
+            caption="실시간 투표 현황"
+          />
         </Box>
 
         {!isResultVisible(election) && (

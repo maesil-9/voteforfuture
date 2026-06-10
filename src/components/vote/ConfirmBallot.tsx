@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import NextLink from "next/link";
-import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, chakra, Flex, Stack, Text, Textarea } from "@chakra-ui/react";
 import { submitVoteAction, type SubmitState } from "@/server/actions/vote";
 
 /**
@@ -23,6 +23,7 @@ export function ConfirmBallot({
     submitVoteAction,
     {},
   );
+  const [message, setMessage] = useState("");
 
   return (
     <Stack gap={6} maxW="md" mx="auto" w="100%">
@@ -99,6 +100,39 @@ export function ConfirmBallot({
       <form action={formAction}>
         <input type="hidden" name="electionId" value={electionId} />
         <Stack gap={3}>
+          {/* 한 마디 (선택) — 선택값과 함께 봉인되어 결과 공개 후 익명으로만 열람 */}
+          <Box
+            bg="bg.surface"
+            border="1px dashed"
+            borderColor="ink.300"
+            borderRadius="sm"
+            p={4}
+          >
+            <Flex justify="space-between" align="baseline" mb={2}>
+              <chakra.label htmlFor="vote-message" fontSize="sm" fontWeight={700}>
+                한 마디 남기기 (선택)
+              </chakra.label>
+              <Text fontSize="xs" color={message.length >= 50 ? "sealwax.700" : "fg.subtle"}>
+                {message.length}/50
+              </Text>
+            </Flex>
+            <Textarea
+              id="vote-message"
+              name="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, 50))}
+              maxLength={50}
+              rows={2}
+              placeholder="다음 방장에게, 혹은 우리 방에게 하고 싶은 말"
+              bg="paper.50"
+              fontSize="sm"
+              resize="none"
+            />
+            <Text mt={1.5} fontSize="xs" color="fg.subtle">
+              메시지는 투표지와 함께 봉인되며, 결과 발표 후 이름 없이 모아서
+              공개될 수 있어요.
+            </Text>
+          </Box>
           <Button
             type="submit"
             size="2xl"

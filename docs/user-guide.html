@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>침착투표소 사용 안내서</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: #FBF8F1;
+    color: #2A2718;
+    line-height: 1.75;
+    font-size: 11.5pt;
+    margin: 0;
+  }
+  .page { padding: 0; }
+  h1, h2, h3 { font-family: 'Noto Serif KR', 'Batang', serif; letter-spacing: -0.02em; }
+  h1 { font-size: 26pt; margin: 0 0 4px; }
+  h2 {
+    font-size: 15pt; margin: 34px 0 10px; padding-bottom: 6px;
+    border-bottom: 2px solid #2A2718;
+  }
+  h2 .step {
+    display: inline-block; background: #34506B; color: #FBF8F1;
+    border-radius: 999px; font-size: 9pt; padding: 1px 10px;
+    vertical-align: middle; margin-right: 8px; font-family: inherit;
+  }
+  h3 { font-size: 12pt; margin: 18px 0 6px; }
+  p { margin: 6px 0; }
+  .masthead { text-align: center; border-bottom: 3px double #2A2718; padding-bottom: 18px; margin-bottom: 6px; }
+  .masthead .kicker { letter-spacing: 0.35em; font-size: 8.5pt; color: #6E6857; text-transform: uppercase; }
+  .masthead .sub { color: #6E6857; font-size: 10.5pt; }
+  .promise {
+    background: #FFFEFA; border: 1px solid #DCD1B8; border-radius: 4px;
+    padding: 14px 18px; margin: 16px 0;
+    box-shadow: 0 1px 2px rgba(42,39,24,0.06);
+  }
+  .promise b { color: #27405A; }
+  ul, ol { margin: 6px 0 6px 4px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .tip {
+    background: #F7ECD4; border: 1px solid #EBCF94; border-radius: 4px;
+    padding: 10px 14px; margin: 10px 0; font-size: 10.5pt;
+  }
+  .tip::before { content: "💡 "; }
+  .warn {
+    background: #FBF8F1; border: 1px dashed #9C4A36; border-radius: 4px;
+    padding: 10px 14px; margin: 10px 0; font-size: 10.5pt; color: #7C3526;
+  }
+  .warn::before { content: "⚠️ "; }
+  .quiet { color: #6E6857; font-size: 10pt; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; background: #FFFEFA; }
+  th, td { border: 1px solid #DCD1B8; padding: 7px 10px; text-align: left; font-size: 10.5pt; }
+  th { background: #F5F0E4; font-weight: 700; }
+  .faq dt { font-weight: 700; margin-top: 12px; }
+  .faq dt::before { content: "Q. "; color: #34506B; }
+  .faq dd { margin: 2px 0 0 0; }
+  .faq dd::before { content: "A. "; color: #A87A24; font-weight: 700; }
+  .footer { margin-top: 40px; border-top: 1px solid #DCD1B8; padding-top: 10px; text-align: center; }
+  .pagebreak { page-break-before: always; }
+  code.url {
+    font-family: Consolas, monospace; background: #F5F0E4;
+    padding: 1px 6px; border-radius: 3px; font-size: 10pt;
+  }
+  .seal {
+    display: inline-block; border: 3px solid #9C4A36; color: #9C4A36;
+    border-radius: 999px; padding: 2px 12px; font-weight: 900;
+    transform: rotate(-4deg); font-size: 10pt;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <div class="kicker">Open Chat Election Booth</div>
+    <h1>침착투표소 사용 안내서</h1>
+    <div class="sub">[침착한 일상 이야기방] 방장 선거 — 누구나 따라할 수 있는 단계별 안내</div>
+  </div>
+
+  <div class="promise">
+    <p><b>침착투표소의 세 가지 약속</b></p>
+    <ul>
+      <li><b>비밀투표</b> — 누가 어떤 후보를 골랐는지는 방장(관리자)을 포함해 그 누구도 볼 수 없어요.</li>
+      <li><b>1인 1표</b> — 같은 닉네임으로는 두 번 투표할 수 없어요.</li>
+      <li><b>결과 봉인</b> — 결과 발표 시각이 되기 전에는 누구도 미리 개표할 수 없어요.</li>
+    </ul>
+  </div>
+
+  <h2>이 안내서를 읽는 분</h2>
+  <table>
+    <tr><th>역할</th><th>하는 일</th><th>읽을 부분</th></tr>
+    <tr><td><b>방장 (관리자)</b></td><td>선거를 만들고, 투표를 검수하고, 결과를 공개</td><td>1 ~ 6단계 전부</td></tr>
+    <tr><td><b>투표자 (방 멤버)</b></td><td>닉네임 적고 투표</td><td>「투표하는 방법」, 「현황 보기」</td></tr>
+  </table>
+
+  <h2><span class="step">1단계</span>선거 만들기 <span class="quiet">— 방장용</span></h2>
+  <ol>
+    <li>관리자 페이지에 접속해요: <code class="url">사이트주소/admin/login</code></li>
+    <li>전달받은 관리자 이메일과 비밀번호로 로그인해요.</li>
+    <li>대시보드에서 <b>「새 선거 만들기」</b> 버튼을 눌러요.</li>
+    <li>아래 항목을 채우고 <b>「선거 만들기」</b>를 눌러요.</li>
+  </ol>
+  <table>
+    <tr><th>항목</th><th>설명</th></tr>
+    <tr><td>선거명</td><td>예: [침착한 일상 이야기방] 방장 선거</td></tr>
+    <tr><td>소개 / 공고문</td><td>첫 화면에 보일 안내 문구 (선택)</td></tr>
+    <tr><td>투표 시작 / 종료</td><td>투표할 수 있는 기간이에요. 이 시간 안에만 투표가 가능해요.</td></tr>
+    <tr><td>결과 발표</td><td>이 시각이 되어야 개표 결과가 열려요. <b>종료 시각보다 뒤</b>여야 해요.</td></tr>
+    <tr><td>상태</td><td>아래 표를 참고하세요.</td></tr>
+    <tr><td>예상 유권자 수</td><td>방 인원수를 적으면 투표율(%)이 계산돼요. (선택)</td></tr>
+  </table>
+  <table>
+    <tr><th>상태</th><th>뜻</th></tr>
+    <tr><td>draft (작성 중)</td><td>방장만 볼 수 있어요. 준비하는 동안 이 상태로 두세요.</td></tr>
+    <tr><td>scheduled (공고됨)</td><td>멤버들에게 보이지만 아직 투표는 안 돼요. 일정이 되면 자동으로 투표가 열려요.</td></tr>
+    <tr><td>open / closed</td><td>보통은 건드릴 필요 없어요. 일정이 알아서 처리해요. (closed로 바꾸면 강제 종료)</td></tr>
+    <tr><td>archived (보관)</td><td>모두 끝난 선거를 정리할 때 사용해요.</td></tr>
+  </table>
+  <div class="tip">준비가 끝나면 상태를 <b>draft → scheduled</b>로 바꿔 저장하세요. 시작 시각이 되면 자동으로 투표가 열려요.</div>
+
+  <h2><span class="step">2단계</span>후보 등록하기 <span class="quiet">— 방장용</span></h2>
+  <ol>
+    <li>선거 관리 화면에서 <b>「후보」 탭</b>을 눌러요.</li>
+    <li>「새 후보 등록」에서 이름을 적고 등록해요. 슬로건·짧은 소개·상세 프로필·상징색은 선택이에요.</li>
+    <li>등록된 후보 카드에서 <b>공약</b>을 하나씩 추가해요. (제목 + 내용)</li>
+    <li><b>포스터</b> 이미지를 올리면 투표 화면이 훨씬 보기 좋아져요. (3MB 이하)</li>
+  </ol>
+  <div class="warn">후보 이름·공약·포스터는 <b>투표가 시작되기 전까지만</b> 고칠 수 있어요. 시작 후에는 잠겨요.</div>
+
+  <h2><span class="step">3단계</span>공유 이미지 올리기 <span class="quiet">— 방장용, 선택</span></h2>
+  <p>선거 관리의 <b>「개요」 탭</b> 아래쪽 「URL 공유 이미지」에서 이미지를 올려두면,
+  카카오톡에 링크를 공유할 때 예쁜 미리보기가 함께 보여요. (권장 크기 1200×630)</p>
+
+  <div class="pagebreak"></div>
+
+  <h2><span class="step">4단계</span>투표 열고 링크 공유하기 <span class="quiet">— 방장용</span></h2>
+  <ol>
+    <li>시작 시각이 되면 투표소가 자동으로 열려요.</li>
+    <li>오픈채팅방에 사이트 주소를 공유해요: <code class="url">사이트주소</code> (첫 화면에 입장 버튼이 있어요)</li>
+  </ol>
+
+  <h2>투표하는 방법 <span class="quiet">— 모든 멤버용</span></h2>
+  <ol>
+    <li>공유받은 링크에 들어가 <b>「닉네임 적고 투표하러 가기」</b>를 눌러요.</li>
+    <li><b>방에서 쓰는 닉네임</b>을 그대로 적고 입장해요.</li>
+    <li>후보 포스터를 눌러 소개와 공약을 읽어봐요.</li>
+    <li>마음을 정했으면 <b>「이 후보를 선택」→「선택 확인으로」</b>를 눌러요.</li>
+    <li>확인 화면에서 <b>한 마디</b>(50자, 선택)를 남길 수 있어요. 다음 방장이나 우리 방에게 하고 싶은 말을 적어보세요.</li>
+    <li><b>「투표 제출하고 봉인하기」</b>를 누르면 끝! 접수 도장이 찍힌 화면이 나와요.</li>
+  </ol>
+  <div class="warn">제출한 표는 <b>바꾸거나 취소할 수 없어요.</b> 신중하게 골라주세요.</div>
+  <div class="tip">닉네임은 "내가 투표했다"는 확인에만 쓰여요. <b>어떤 후보를 골랐는지와는 절대 연결되지 않아요.</b> 한 마디 메시지도 이름 없이 봉인돼요.</div>
+
+  <h2><span class="step">5단계</span>검수하기 — 승인과 무효 <span class="quiet">— 방장용</span></h2>
+  <p>멤버들이 투표하면 <b>「검수」 탭</b>에 닉네임 목록이 쌓여요.
+  방장은 이 이름이 진짜 우리 방 멤버인지 확인하고 결정해요.
+  <b>표의 내용(누굴 찍었는지)은 보이지 않고, 한 마디 메시지도 "있는지 없는지"만 보여요.</b></p>
+  <table>
+    <tr><th>버튼</th><th>언제 누르나요?</th><th>그러면 어떻게 되나요?</th></tr>
+    <tr>
+      <td><b>승인</b></td>
+      <td>우리 방 멤버가 맞을 때</td>
+      <td>표가 익명 투표함에 들어가요. 이때부터 그 표는 누구 것인지 아무도 알 수 없어요.</td>
+    </tr>
+    <tr>
+      <td><b>무효</b></td>
+      <td>명단에 없는 이름, 오타, 장난 제출일 때</td>
+      <td>표는 열어보지 않은 채 버려져요. 그 닉네임으로 다시 투표할 수 있게 돼요.</td>
+    </tr>
+    <tr>
+      <td><b>전체 승인</b></td>
+      <td>대기 중인 이름이 모두 멤버가 맞을 때</td>
+      <td>대기 중인 표를 한 번에 모두 승인해요.</td>
+    </tr>
+  </table>
+  <div class="warn">승인과 무효는 <b>되돌릴 수 없어요.</b> 승인 전에 이름을 꼭 확인하세요.
+  그리고 <b>결과 발표 전에 검수를 끝내주세요</b> — 검수가 안 된 표는 개표에 포함되지 않아요.</div>
+  <div class="tip">누가 내 이름으로 먼저 투표했다는 제보가 오면? 검수 탭에서 그 제출을 <b>무효</b> 처리하세요. 그러면 본인이 다시 투표할 수 있어요.</div>
+
+  <h2>투표 현황 보기 <span class="quiet">— 모든 멤버용</span></h2>
+  <p>아래 화면들에서 <b>실시간 현황</b>(접수 / 승인된 표 / 검수 대기 / 무효 처리)을 누구나 볼 수 있어요.
+  방장이 승인이나 무효를 처리하면 약 10초 안에 숫자가 바뀌어요.</p>
+  <ul>
+    <li>첫 화면 (<code class="url">사이트주소</code>)</li>
+    <li>투표를 마친 직후의 완료 화면</li>
+    <li>결과 페이지 (발표 전에는 봉인 안내와 현황만 보여요)</li>
+  </ul>
+  <p class="quiet">보이는 것은 숫자뿐이에요. 누가 투표했는지, 누구를 찍었는지는 보이지 않아요.</p>
+
+  <h2><span class="step">6단계</span>결과 공개 <span class="quiet">— 자동</span></h2>
+  <ol>
+    <li>설정해둔 <b>결과 발표 시각</b>이 되면, 봉인이 자동으로 풀려요. <span class="seal">封 → 개표</span></li>
+    <li>결과 페이지와 관리자 「결과」 탭에서 당선자·득표수·득표율을 볼 수 있어요.</li>
+    <li>최다 득표가 같으면 <b>동률</b>로 표시돼요. 이후 처리(결선 등)는 방 규칙으로 정해요.</li>
+    <li>관리자 「결과」 탭에는 투표자들이 남긴 <b>익명 한 마디 모음</b>도 함께 보여요. 다음 운영에 참고해보세요.</li>
+  </ol>
+
+  <h2>자주 묻는 질문</h2>
+  <dl class="faq">
+    <dt>방장은 제가 누굴 찍었는지 알 수 있나요?</dt>
+    <dd>아니요. 표는 제출 즉시 암호로 봉인되고, 승인되는 순간 이름과의 연결이 완전히 사라져요.</dd>
+    <dt>결과를 미리 볼 수 있는 방법이 있나요?</dt>
+    <dd>없어요. 발표 시각 전에는 시스템 자체가 개표를 거부해요. 방장도 못 봐요.</dd>
+    <dt>닉네임을 잘못 적고 제출했어요.</dt>
+    <dd>방장에게 알려주세요. 방장이 그 표를 무효 처리하면 올바른 닉네임으로 다시 투표할 수 있어요.</dd>
+    <dt>같은 닉네임으로 두 번 투표하면요?</dt>
+    <dd>두 번째 제출은 자동으로 막혀요. "이미 접수되었습니다" 안내가 떠요.</dd>
+    <dt>한 마디 메시지는 누가 보나요?</dt>
+    <dd>결과 발표 후에 이름 없이 모아서 공개돼요. 검수 중에는 방장도 내용을 볼 수 없어요.</dd>
+    <dt>투표 도중에 창을 닫았어요.</dt>
+    <dd>제출 전이라면 괜찮아요. 다시 들어가 닉네임을 적으면 처음부터 진행할 수 있어요.</dd>
+  </dl>
+
+  <h2>꼭 기억해주세요</h2>
+  <div class="promise">
+    <ul>
+      <li>제출한 표는 <b>변경·취소 불가</b> / 승인·무효도 <b>되돌릴 수 없음</b></li>
+      <li>후보 정보 수정은 <b>투표 시작 전까지만</b></li>
+      <li>검수는 <b>결과 발표 전에</b> 끝내기</li>
+      <li>표의 내용은 <b>그 누구도</b> 미리 볼 수 없음 — 이것이 침착투표소의 존재 이유예요</li>
+    </ul>
+  </div>
+
+  <div class="footer quiet">
+    침착투표소 — 작지만 신뢰할 수 있는 우리 방의 비밀투표
+  </div>
+
+</div>
+</body>
+</html>

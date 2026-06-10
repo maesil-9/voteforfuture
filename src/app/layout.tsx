@@ -1,7 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Provider } from "@/components/ui/provider";
 
+// Netlify는 URL 환경변수를 자동 제공한다. 커스텀 도메인은 NEXT_PUBLIC_SITE_URL로 지정.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.URL ??
+  "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "침착투표소 — [침착한 일상 이야기방] 방장 선거",
     template: "%s | 침착투표소",

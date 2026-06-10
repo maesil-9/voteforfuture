@@ -3,11 +3,8 @@ import { execSync } from "node:child_process";
 import { query } from "../../../src/server/db";
 import { createElection } from "../../../src/server/sql/elections";
 import { createCandidate } from "../../../src/server/sql/candidates";
-import { createBatchWithCredentials } from "../../../src/server/sql/voters";
-import {
-  generateVoterCode,
-  hashCode,
-} from "../../../src/server/crypto/code-hash";
+import { createAdmin } from "../../../src/server/sql/admin";
+import { hashPassword } from "../../../src/server/auth/password";
 import type { Election } from "../../../src/server/types";
 
 let failures = 0;
@@ -36,17 +33,15 @@ export function resetAndMigrate() {
   execSync("npx tsx scripts/migrate.ts", { stdio: "inherit" });
 }
 
-/** 하네스 전용: 후보 2명 + 유권자 N명을 가진 선거를 만든다 */
+/** 하네스 전용: 후보 2명을 가진 open 상태 선거를 만든다 */
 export async function makeTestElection(opts: {
   title: string;
-  voterCount: number;
+  expectedVoters?: number;
   resultVisibleAt: Date;
   endsAt?: Date;
 }): Promise<{
   election: Election;
   candidateIds: string[];
-  codes: string[];
-  codeHashes: string[];
 }> {
   const now = Date.now();
   const election = await createElection({
@@ -56,7 +51,7 @@ export async function makeTestElection(opts: {
     startsAt: new Date(now - 3600_000),
     endsAt: opts.endsAt ?? new Date(now + 3600_000),
     resultVisibleAt: opts.resultVisibleAt,
-    maxVoters: opts.voterCount,
+    maxVoters: opts.expectedVoters ?? 0,
   });
 
   const candidateIds = [
@@ -78,13 +73,12 @@ export async function makeTestElection(opts: {
     }),
   ];
 
-  const codes = Array.from({ length: opts.voterCount }, () =>
-    generateVoterCode(),
-  );
-  const codeHashes = codes.map((c) => hashCode(c));
-  await createBatchWithCredentials(election.id, "하네스 명부", codeHashes);
+  return { election, candidateIds };
+}
 
-  return { election, candidateIds, codes, codeHashes };
+/** 하네스 전용 관리자 (검수 동작에 필요) */
+export async function makeTestAdmin(email: string): Promise<string> {
+  return createAdmin(email, await hashPassword("harness-password-1!"));
 }
 
 export async function columnNames(table: string): Promise<string[]> {

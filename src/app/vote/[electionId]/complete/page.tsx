@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import NextLink from "next/link";
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { ElectionShell } from "@/components/layout/ElectionShell";
+import { ParticipationLive } from "@/components/election/ParticipationLive";
 import { getElection } from "@/server/sql/elections";
+import { getParticipation } from "@/server/sql/submissions";
 import { verifyPayload } from "@/server/auth/signing";
 import { env } from "@/server/env";
 import { formatDateTime } from "@/lib/format";
@@ -23,7 +25,7 @@ export default async function CompletePage({
   const store = await cookies();
   const doneToken = store.get("cv_done")?.value;
   const done = doneToken
-    ? verifyPayload<{ electionId: string; exp: number }>(
+    ? verifyPayload<{ electionId: string; voterName?: string; exp: number }>(
         doneToken,
         env.adminSessionSecret,
       )
@@ -40,6 +42,7 @@ export default async function CompletePage({
   if (!election) {
     redirect("/");
   }
+  const participation = await getParticipation(electionId);
 
   return (
     <ElectionShell>
@@ -62,15 +65,26 @@ export default async function CompletePage({
             {election.title}
           </Text>
           <Text fontFamily="heading" fontWeight={900} fontSize={{ base: "3xl", md: "4xl" }}>
-            투표가 봉인되었습니다
+            투표가 접수되었습니다
           </Text>
           <Text mt={4} color="fg.muted">
-            소중한 한 표가 투표함에 안전하게 들어갔습니다.
+            {done.voterName ? (
+              <>
+                <Text as="span" fontWeight={700} color="fg.default">
+                  {done.voterName}
+                </Text>
+                님의 한 표가 봉인된 채 접수됐어요.
+              </>
+            ) : (
+              "한 표가 봉인된 채 접수됐어요."
+            )}
+            <br />
+            방장의 명단 검수(승인)를 거쳐 투표함에 들어갑니다.
             <br />
             선택 내용은 누구도 열람할 수 없습니다.
           </Text>
 
-          {/* 완료 도장 */}
+          {/* 접수 도장 */}
           <Flex
             aria-hidden
             position="absolute"
@@ -90,8 +104,22 @@ export default async function CompletePage({
             fontSize={{ base: "md", md: "lg" }}
             boxShadow="paper"
           >
-            투표완료
+            접수완료
           </Flex>
+        </Box>
+
+        {/* 실시간 현황 — 검수가 처리되면 여기 숫자가 움직인다 */}
+        <Box
+          w="100%"
+          maxW="lg"
+          bg="bg.surface"
+          border="1px solid"
+          borderColor="border.default"
+          boxShadow="paper"
+          borderRadius="2px"
+          p={{ base: 5, md: 6 }}
+        >
+          <ParticipationLive electionId={electionId} initial={participation} />
         </Box>
 
         <Box textAlign="center">

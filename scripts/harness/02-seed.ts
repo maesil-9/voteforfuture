@@ -25,19 +25,33 @@ async function main() {
     "후보별 포스터 생성",
     (await count("select count(*) as count from candidate_posters")) === 3,
   );
-  check(
-    "유권자 코드 30개 발급",
-    (await count("select count(*) as count from voter_credentials")) === 30,
-  );
   check("관리자 1명 생성", (await count("select count(*) as count from admins")) === 1);
 
-  // 시드도 코드 원문을 저장하지 않는지 — 64자리 hex(HMAC)만 저장
-  const { rows } = await query<{ code_hash: string }>(
-    "select code_hash from voter_credentials limit 5",
+  check(
+    "데모 투표 7건 접수",
+    (await count("select count(*) as count from vote_submissions")) === 7,
   );
   check(
-    "code_hash는 HMAC hex 형식 (원문 아님)",
-    rows.every((r) => /^[0-9a-f]{64}$/.test(r.code_hash)),
+    "5건 승인",
+    (await count(
+      "select count(*) as count from vote_submissions where status = 'approved'",
+    )) === 5,
+  );
+  check(
+    "2건 검수 대기",
+    (await count(
+      "select count(*) as count from vote_submissions where status = 'pending'",
+    )) === 2,
+  );
+  check(
+    "승인된 표 수만큼 익명 투표함에 존재",
+    (await count("select count(*) as count from ballots")) === 5,
+  );
+  check(
+    "승인된 제출에는 봉인값이 남아있지 않음",
+    (await count(
+      "select count(*) as count from vote_submissions where status = 'approved' and sealed_choice is not null",
+    )) === 0,
   );
 
   finish("Harness 2");

@@ -25,6 +25,12 @@ import {
   updatePolicy,
 } from "../sql/candidates";
 import { canEditBallotStructure } from "../guards/election-state";
+import {
+  approveAllPending,
+  approveSubmission,
+  rejectSubmission,
+} from "../services/review";
+import { deleteOgImage, setOgImage } from "../sql/og";
 import type { ElectionStatus } from "../types";
 
 /**
@@ -315,6 +321,104 @@ export async function savePolicyAction(
 
   revalidatePath(`/admin/elections/${electionId}/candidates`);
   redirect(`/admin/elections/${electionId}/candidates?saved=1`);
+}
+
+// ---------- Open Graph 이미지 (URL 공유 미리보기) ----------
+
+export async function uploadOgImageAction(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const electionId = String(formData.get("electionId") ?? "");
+  const file = formData.get("ogImage");
+
+  const election = await getElection(electionId);
+  if (!election) {
+    redirect("/admin");
+  }
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(`/admin/elections/${electionId}?og=nofile`);
+  }
+  if (file.size > MAX_POSTER_BYTES) {
+    redirect(`/admin/elections/${electionId}?og=toobig`);
+  }
+  if (!ALLOWED_MIME.includes(file.type)) {
+    redirect(`/admin/elections/${electionId}?og=badtype`);
+  }
+
+  const data = Buffer.from(await file.arrayBuffer());
+  await setOgImage(electionId, {
+    fileName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    data,
+  });
+  await insertAuditLog({
+    adminId: session.adminId,
+    action: "election.og_image_upload",
+    targetType: "election",
+    targetId: electionId,
+    metadata: { sizeBytes: file.size, mimeType: file.type },
+  });
+
+  revalidatePath(`/admin/elections/${electionId}`);
+  revalidatePath("/");
+  redirect(`/admin/elections/${electionId}?og=saved`);
+}
+
+export async function deleteOgImageAction(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const electionId = String(formData.get("electionId") ?? "");
+
+  await deleteOgImage(electionId);
+  await insertAuditLog({
+    adminId: session.adminId,
+    action: "election.og_image_delete",
+    targetType: "election",
+    targetId: electionId,
+  });
+
+  revalidatePath(`/admin/elections/${electionId}`);
+  revalidatePath("/");
+  redirect(`/admin/elections/${electionId}?og=deleted`);
+}
+
+// ---------- 투표 검수 (승인 / 무효) ----------
+
+export async function approveSubmissionAction(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const electionId = String(formData.get("electionId") ?? "");
+  const submissionId = String(formData.get("submissionId") ?? "");
+
+  const result = await approveSubmission(submissionId, session.adminId);
+  revalidatePath(`/admin/elections/${electionId}/review`);
+  redirect(
+    result.ok
+      ? `/admin/elections/${electionId}/review`
+      : `/admin/elections/${electionId}/review?error=${encodeURIComponent(result.message)}`,
+  );
+}
+
+export async function rejectSubmissionAction(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const electionId = String(formData.get("electionId") ?? "");
+  const submissionId = String(formData.get("submissionId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim() || null;
+
+  const result = await rejectSubmission(submissionId, session.adminId, reason);
+  revalidatePath(`/admin/elections/${electionId}/review`);
+  redirect(
+    result.ok
+      ? `/admin/elections/${electionId}/review`
+      : `/admin/elections/${electionId}/review?error=${encodeURIComponent(result.message)}`,
+  );
+}
+
+export async function approveAllPendingAction(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+  const electionId = String(formData.get("electionId") ?? "");
+
+  await approveAllPending(electionId, session.adminId);
+  revalidatePath(`/admin/elections/${electionId}/review`);
+  redirect(`/admin/elections/${electionId}/review`);
 }
 
 export async function deletePolicyAction(formData: FormData): Promise<void> {

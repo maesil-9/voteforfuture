@@ -6,34 +6,42 @@
 import "../lib/bootstrap";
 import { closePool } from "../../src/server/db";
 import { submitVote } from "../../src/server/services/vote";
+import { approveSubmission } from "../../src/server/services/review";
 import { aggregateResults } from "../../src/server/services/results";
 import { getElection } from "../../src/server/sql/elections";
 import { listSealedBallots } from "../../src/server/sql/ballots";
-import { hashCode } from "../../src/server/crypto/code-hash";
 import {
   ResultsSealedError,
   unsealChoice,
 } from "../../src/server/crypto/ballot-sealing";
 import { assertResultVisible } from "../../src/server/guards/result-visibility";
-import { check, finish, makeTestElection, revealResults } from "./lib/util";
+import {
+  check,
+  finish,
+  makeTestAdmin,
+  makeTestElection,
+  revealResults,
+} from "./lib/util";
 
 async function main() {
   console.log("[Harness 7] Result Seal");
 
-  // 1. result_visible_at이 미래인 선거 (투표는 종료됨)
-  const { election, candidateIds, codes } = await makeTestElection({
+  // 1. result_visible_at이 미래인 선거
+  const { election, candidateIds } = await makeTestElection({
     title: "봉인 하네스",
-    voterCount: 3,
     resultVisibleAt: new Date(Date.now() + 86400_000),
   });
+  const adminId = await makeTestAdmin("seal-harness@calmvote.local");
 
   for (let i = 0; i < 3; i++) {
     const r = await submitVote({
       electionId: election.id,
-      codeHash: hashCode(codes[i]),
+      voterName: `봉인테스터${i}`,
       candidateId: candidateIds[i % 2],
     });
     if (!r.ok) throw new Error(`투표 실패: ${r.message}`);
+    const approval = await approveSubmission(r.submissionId, adminId);
+    if (!approval.ok) throw new Error("승인 실패");
   }
 
   // 2~5. 봉인 상태 검증 — 모든 레벨에서 차단
@@ -55,6 +63,7 @@ async function main() {
 
   // 복호화 함수 자체의 내장 guard도 차단해야 한다 (가장 낮은 레벨)
   const sealed = await listSealedBallots(election.id);
+  check("승인된 3표가 익명 투표함에 존재", sealed.length === 3);
   let decryptBlocked = false;
   try {
     unsealChoice(sealed[0], { resultVisibleAt: election.resultVisibleAt });
@@ -70,7 +79,7 @@ async function main() {
   const results = await aggregateResults(revealed);
   check("발표 후 집계 정상", results.totalBallots === 3);
   check(
-    "득표 합계 = 총 투표수",
+    "득표 합계 = 총 개표 수",
     results.perCandidate.reduce((s, c) => s + c.votes, 0) === 3,
   );
 

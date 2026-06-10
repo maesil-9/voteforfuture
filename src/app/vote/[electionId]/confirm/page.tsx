@@ -21,7 +21,7 @@ export default async function ConfirmPage({
 
   const session = await getVoterSession(electionId);
   if (!session) {
-    redirect("/vote/enter-code?expired=1");
+    redirect("/vote/enter-name?expired=1");
   }
   if (!session.selectedCandidateId) {
     redirect(`/vote/${electionId}`);

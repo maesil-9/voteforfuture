@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { verifyVoterCode, submitVote } from "../services/vote";
+import { verifyVoterName, submitVote } from "../services/vote";
 import {
   createVoterSession,
   destroyVoterSession,
@@ -27,25 +27,25 @@ async function clientIp(): Promise<string> {
   return fwd ? fwd.split(",")[0].trim() : "local";
 }
 
-export type EnterCodeState = { error?: string };
+export type EnterNameState = { error?: string };
 
-export async function enterCodeAction(
-  _prev: EnterCodeState,
+export async function enterNameAction(
+  _prev: EnterNameState,
   formData: FormData,
-): Promise<EnterCodeState> {
+): Promise<EnterNameState> {
   const electionId = String(formData.get("electionId") ?? "");
-  const code = String(formData.get("code") ?? "");
+  const name = String(formData.get("voterName") ?? "");
 
-  if (!electionId || !code.trim()) {
-    return { error: "투표 코드를 입력해주세요." };
+  if (!electionId) {
+    return { error: "선거 정보를 찾을 수 없습니다." };
   }
 
-  const result = await verifyVoterCode(electionId, code, await clientIp());
+  const result = await verifyVoterName(electionId, name, await clientIp());
   if (!result.ok) {
     return { error: result.message };
   }
 
-  await createVoterSession(electionId, result.codeHash);
+  await createVoterSession(electionId, result.voterName);
   redirect(`/vote/${electionId}`);
 }
 
@@ -60,7 +60,7 @@ export async function selectCandidateAction(
 
   const session = await getVoterSession(electionId);
   if (!session) {
-    redirect("/vote/enter-code?expired=1");
+    redirect("/vote/enter-name?expired=1");
   }
 
   const election = await getElection(electionId);
@@ -89,33 +89,40 @@ export async function submitVoteAction(
 
   const session = await getVoterSession(electionId);
   if (!session) {
-    redirect("/vote/enter-code?expired=1");
+    redirect("/vote/enter-name?expired=1");
   }
   if (!session.selectedCandidateId) {
     redirect(`/vote/${electionId}`);
   }
 
+  const message = String(formData.get("message") ?? "").trim().slice(0, 50);
+
   const result = await submitVote({
     electionId,
-    codeHash: session.codeHash,
+    voterName: session.voterName,
     candidateId: session.selectedCandidateId,
+    message: message || undefined,
   });
 
   if (!result.ok) {
-    if (result.reason === "already_voted") {
+    if (result.reason === "duplicate") {
       await destroyVoterSession();
-      redirect(`/vote/enter-code?already=1`);
+      redirect(`/vote/enter-name?already=1`);
     }
     return { error: result.message };
   }
 
-  // 세션(코드 해시 포함)을 즉시 폐기하고, 완료 화면 접근용 단기 쿠키만 남긴다.
+  // 세션을 즉시 폐기하고, 완료 화면 접근용 단기 쿠키만 남긴다.
   await destroyVoterSession();
   const store = await cookies();
   store.set(
     "cv_done",
     signPayload(
-      { electionId, exp: Math.floor(Date.now() / 1000) + 3600 },
+      {
+        electionId,
+        voterName: session.voterName,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      },
       env.adminSessionSecret,
     ),
     {

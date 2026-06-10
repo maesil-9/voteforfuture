@@ -142,10 +142,17 @@ export function WinnerAnnouncement({ results }: { results: ElectionResults }) {
         wrap="wrap"
         justify="center"
       >
-        <SummaryItem label="총 투표수" value={`${results.totalBallots}표`} />
-        <SummaryItem label="총 유권자" value={`${results.totalVoters}명`} />
-        <SummaryItem label="투표율" value={`${results.turnoutPercent}%`} />
+        <SummaryItem label="개표된 표" value={`${results.totalBallots}표`} />
+        <SummaryItem label="투표 접수" value={`${results.totalSubmitted}명`} />
+        <SummaryItem label="무효 처리" value={`${results.rejectedCount}건`} />
       </Flex>
+
+      {results.pendingCount > 0 && (
+        <Text fontSize="sm" color="sealwax.700" fontWeight={600} textAlign="center">
+          검수가 끝나지 않은 표 {results.pendingCount}건은 이 집계에 포함되지
+          않았습니다. 검수 완료 후 결과가 갱신될 수 있습니다.
+        </Text>
+      )}
     </Stack>
   );
 }

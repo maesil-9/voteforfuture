@@ -4,13 +4,35 @@ import { ElectionShell } from "@/components/layout/ElectionShell";
 import { ResultLockPanel } from "@/components/election/ResultLockPanel";
 import { WinnerAnnouncement } from "@/components/election/WinnerAnnouncement";
 import { getElection } from "@/server/sql/elections";
-import { getTurnout } from "@/server/sql/voters";
+import { getParticipation } from "@/server/sql/submissions";
+import { hasOgImage } from "@/server/sql/og";
 import { isResultVisible } from "@/server/guards/result-visibility";
 import { aggregateResults } from "@/server/services/results";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "개표 결과" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ electionId: string }>;
+}) {
+  const { electionId } = await params;
+  const election = await getElection(electionId).catch(() => null);
+  if (!election || election.status === "draft") return { title: "개표 결과" };
+
+  const images = (await hasOgImage(electionId).catch(() => false))
+    ? [{ url: `/api/og-image/${electionId}`, width: 1200, height: 630 }]
+    : undefined;
+
+  return {
+    title: "개표 결과",
+    openGraph: {
+      title: `${election.title} — 개표 결과`,
+      type: "website",
+      images,
+    },
+  };
+}
 
 export default async function ResultsPage({
   params,
@@ -42,7 +64,10 @@ export default async function ResultsPage({
         {visible ? (
           <WinnerAnnouncement results={await aggregateResults(election)} />
         ) : (
-          <ResultLockPanel election={election} turnout={await getTurnout(election.id)} />
+          <ResultLockPanel
+            election={election}
+            participation={await getParticipation(election.id)}
+          />
         )}
       </Stack>
     </ElectionShell>

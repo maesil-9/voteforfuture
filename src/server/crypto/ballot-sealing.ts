@@ -23,6 +23,8 @@ export type SealedChoice = {
 export type BallotChoice = {
   electionId: string;
   candidateId: string;
+  /** 투표 시 남긴 한 마디 (선택, 50자) — 선택값과 함께 봉인된다 */
+  message?: string;
 };
 
 export class ResultsSealedError extends Error {

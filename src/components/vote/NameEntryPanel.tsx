@@ -1,33 +1,26 @@
 "use client";
 
-import { useActionState, useId, useRef } from "react";
+import { useActionState, useId } from "react";
 import { Box, Button, chakra, Flex, Input, Stack, Text } from "@chakra-ui/react";
-import { enterCodeAction, type EnterCodeState } from "@/server/actions/vote";
+import { enterNameAction, type EnterNameState } from "@/server/actions/vote";
 
 /**
- * 초대장 코드 입력 패널.
- * 단순 input이 아니라 "선거 초대장"을 여는 경험:
- * 절취선 카드 + 자동 하이픈 포맷 + 붙여넣기 친화.
+ * 방명록 패널 — 유권자가 오픈채팅 닉네임을 적고 기표소에 입장한다.
+ * 잘못 적거나 남의 이름을 적으면 검수에서 무효 처리됨을 명확히 알린다.
  */
-export function CodeInvitationPanel({
+export function NameEntryPanel({
   electionId,
   initialError,
 }: {
   electionId: string;
   initialError?: string;
 }) {
-  const [state, formAction, pending] = useActionState<EnterCodeState, FormData>(
-    enterCodeAction,
+  const [state, formAction, pending] = useActionState<EnterNameState, FormData>(
+    enterNameAction,
     { error: initialError },
   );
-  const inputRef = useRef<HTMLInputElement>(null);
   const hintId = useId();
   const errorId = useId();
-
-  function formatAsTyping(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
-    e.target.value = raw.replace(/(.{4})(?=.)/g, "$1-");
-  }
 
   return (
     <Box
@@ -43,10 +36,10 @@ export function CodeInvitationPanel({
     >
       <Box bg="booth.700" color="paper.50" px={6} py={4}>
         <Text fontSize="2xs" letterSpacing="0.24em" textTransform="uppercase" opacity={0.75}>
-          Invitation
+          Visitor Book
         </Text>
         <Text fontFamily="heading" fontWeight={700} fontSize="lg">
-          내 투표 코드로 입장하기
+          이름 적고 입장하기
         </Text>
       </Box>
 
@@ -60,25 +53,20 @@ export function CodeInvitationPanel({
         <Stack gap={4} p={{ base: 5, md: 6 }}>
           <input type="hidden" name="electionId" value={electionId} />
           <Box>
-            <chakra.label htmlFor="voter-code" fontSize="sm" fontWeight={700} display="block" mb={2}>
-              투표 코드
+            <chakra.label htmlFor="voter-name" fontSize="sm" fontWeight={700} display="block" mb={2}>
+              오픈채팅 닉네임
             </chakra.label>
             <Input
-              ref={inputRef}
-              id="voter-code"
-              name="code"
-              placeholder="CALM-0000-0000"
-              autoComplete="one-time-code"
-              autoCapitalize="characters"
+              id="voter-name"
+              name="voterName"
+              placeholder="방에서 쓰는 닉네임 그대로"
+              autoComplete="off"
+              maxLength={30}
               spellCheck={false}
-              inputMode="text"
-              onChange={formatAsTyping}
               aria-describedby={state.error ? errorId : hintId}
               aria-invalid={state.error ? true : undefined}
               size="xl"
-              fontFamily="mono"
-              fontSize="xl"
-              letterSpacing="0.12em"
+              fontSize="lg"
               textAlign="center"
               bg="paper.50"
               borderColor={state.error ? "sealwax.500" : "border.default"}
@@ -90,7 +78,8 @@ export function CodeInvitationPanel({
               </Text>
             ) : (
               <Text id={hintId} mt={2} fontSize="xs" color="fg.subtle">
-                대소문자와 하이픈(-)은 자동으로 정리됩니다. 그대로 붙여넣어도 좋아요.
+                방장이 명단과 대조해 검수합니다. 닉네임이 다르거나 장난 제출은
+                무효 처리돼요.
               </Text>
             )}
           </Box>
@@ -106,12 +95,13 @@ export function CodeInvitationPanel({
             loading={pending}
             loadingText="확인 중…"
           >
-            투표소 입장
+            기표소 입장
           </Button>
 
           <Flex justify="center">
             <Text fontSize="xs" color="fg.subtle" textAlign="center">
-              코드는 1인 1회만 사용할 수 있으며, 입장 기록은 투표 내용과 연결되지 않습니다.
+              이름은 1인 1회 투표 확인에만 쓰이며, 어떤 후보를 선택했는지와는
+              연결되지 않습니다.
             </Text>
           </Flex>
         </Stack>

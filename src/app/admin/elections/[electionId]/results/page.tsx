@@ -3,6 +3,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ElectionTabs } from "@/components/admin/ElectionTabs";
 import { AdminSealPanel } from "@/components/admin/AdminSealPanel";
+import { MessageWall } from "@/components/election/MessageWall";
 import { WinnerAnnouncement } from "@/components/election/WinnerAnnouncement";
 import { requireAdmin } from "@/server/auth/admin-session";
 import { getElection } from "@/server/sql/elections";
@@ -28,17 +29,23 @@ export default async function ResultsAdminPage({
   // (호출하더라도 aggregateResults → assertResultVisible과
   //  unsealChoice 내장 가드가 이중으로 차단한다)
   const visible = isResultVisible(election);
+  const results = visible ? await aggregateResults(election) : null;
 
   return (
     <AdminShell adminEmail={session.email}>
-      <Stack gap={4}>
-        <Text as="h1" fontFamily="heading" fontWeight={900} fontSize="2xl">
-          {election.title} — 결과
-        </Text>
-        <ElectionTabs electionId={electionId} active="/results" />
+      <Stack gap={8}>
+        <Stack gap={4}>
+          <Text as="h1" fontFamily="heading" fontWeight={900} fontSize="2xl">
+            {election.title} — 결과
+          </Text>
+          <ElectionTabs electionId={electionId} active="/results" />
+        </Stack>
 
-        {visible ? (
-          <WinnerAnnouncement results={await aggregateResults(election)} />
+        {results ? (
+          <>
+            <WinnerAnnouncement results={results} />
+            <MessageWall messages={results.messages} />
+          </>
         ) : (
           <AdminSealPanel election={election} />
         )}

@@ -7,8 +7,9 @@ import {
   createPolicy,
   setPoster,
 } from "../../src/server/sql/candidates";
-import { createBatchWithCredentials } from "../../src/server/sql/voters";
-import { generateVoterCode, hashCode } from "../../src/server/crypto/code-hash";
+import { submitVote } from "../../src/server/services/vote";
+import { approveSubmission } from "../../src/server/services/review";
+import { listSubmissions } from "../../src/server/sql/submissions";
 import type { Election, ElectionStatus } from "../../src/server/types";
 
 export const DEMO_CANDIDATES = [
@@ -80,6 +81,19 @@ export const DEMO_CANDIDATES = [
   },
 ];
 
+/** 데모 투표자 명단 (앞 5명은 승인, 나머지는 검수 대기 상태로 남긴다) */
+export const DEMO_VOTER_ENTRIES: { name: string; message?: string }[] = [
+  { name: "민트초코", message: "누가 되든 우리 방 평화롭게 부탁해요" },
+  { name: "야근하는라쿤", message: "새벽 시간대도 챙겨주세요!" },
+  { name: "햇살한스푼" },
+  { name: "고요한새벽", message: "공지는 적게, 웃음은 많게" },
+  { name: "감자전" },
+  { name: "지나가던행인", message: "다들 한 표 행사합시다" },
+  { name: "츤데레토끼" },
+];
+
+export const DEMO_VOTERS = DEMO_VOTER_ENTRIES.map((v) => v.name);
+
 function posterSvg(name: string, slogan: string, color: string): Buffer {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
   <rect width="600" height="800" fill="${color}"/>
@@ -98,9 +112,8 @@ export async function createDemoElection(opts: {
   startsAt: Date;
   endsAt: Date;
   resultVisibleAt: Date;
-  voterCount: number;
-  batchName?: string;
-}): Promise<{ election: Election; codes: string[] }> {
+  expectedVoters: number;
+}): Promise<{ election: Election; candidateIds: string[] }> {
   const election = await createElection({
     title: opts.title,
     description:
@@ -109,9 +122,10 @@ export async function createDemoElection(opts: {
     startsAt: opts.startsAt,
     endsAt: opts.endsAt,
     resultVisibleAt: opts.resultVisibleAt,
-    maxVoters: opts.voterCount,
+    maxVoters: opts.expectedVoters,
   });
 
+  const candidateIds: string[] = [];
   for (let i = 0; i < DEMO_CANDIDATES.length; i++) {
     const c = DEMO_CANDIDATES[i];
     const candidateId = await createCandidate(election.id, {
@@ -122,6 +136,7 @@ export async function createDemoElection(opts: {
       colorHint: c.colorHint,
       displayOrder: i,
     });
+    candidateIds.push(candidateId);
     for (let j = 0; j < c.policies.length; j++) {
       await createPolicy(candidateId, {
         title: c.policies[j].title,
@@ -138,12 +153,42 @@ export async function createDemoElection(opts: {
     });
   }
 
-  const codes = Array.from({ length: opts.voterCount }, () => generateVoterCode());
-  await createBatchWithCredentials(
-    election.id,
-    opts.batchName ?? "데모 1차 명부",
-    codes.map((c) => hashCode(c)),
-  );
+  return { election, candidateIds };
+}
 
-  return { election, codes };
+/**
+ * 데모 투표 제출 + 일부 승인.
+ * 투표가 open 상태인 선거에서만 동작한다.
+ */
+export async function createDemoSubmissions(
+  electionId: string,
+  candidateIds: string[],
+  adminId: string,
+  approveCount = 5,
+): Promise<{ submitted: number; approved: number }> {
+  for (let i = 0; i < DEMO_VOTER_ENTRIES.length; i++) {
+    const entry = DEMO_VOTER_ENTRIES[i];
+    const result = await submitVote({
+      electionId,
+      voterName: entry.name,
+      candidateId: candidateIds[i % candidateIds.length],
+      message: entry.message,
+    });
+    if (!result.ok) {
+      throw new Error(`데모 투표 실패 (${entry.name}): ${result.message}`);
+    }
+  }
+
+  const submissions = await listSubmissions(electionId);
+  const pending = submissions
+    .filter((s) => s.status === "pending")
+    .sort((a, b) => a.submittedAt.getTime() - b.submittedAt.getTime());
+
+  let approved = 0;
+  for (const s of pending.slice(0, approveCount)) {
+    const r = await approveSubmission(s.id, adminId);
+    if (r.ok) approved++;
+  }
+
+  return { submitted: DEMO_VOTER_ENTRIES.length, approved };
 }

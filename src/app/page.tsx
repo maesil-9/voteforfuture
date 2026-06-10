@@ -2,15 +2,45 @@ import NextLink from "next/link";
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { ElectionShell } from "@/components/layout/ElectionShell";
 import { ElectionTimeline } from "@/components/election/ElectionTimeline";
-import { TurnoutGauge } from "@/components/election/TurnoutGauge";
+import { ParticipationLive } from "@/components/election/ParticipationLive";
 import { SealedStatus } from "@/components/election/SealedStatus";
 import { getLatestPublicElection } from "@/server/sql/elections";
-import { getTurnout } from "@/server/sql/voters";
+import { getParticipation } from "@/server/sql/submissions";
+import { hasOgImage } from "@/server/sql/og";
 import { getElectionPhase } from "@/server/guards/election-state";
 import { isResultVisible } from "@/server/guards/result-visibility";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+/** URL 공유 시 선거별 OG 이미지가 미리보기에 쓰이도록 메타데이터 구성 */
+export async function generateMetadata() {
+  const election = await getLatestPublicElection().catch(() => null);
+  if (!election) return {};
+
+  const description =
+    election.description ??
+    "익명이 보장되는 비밀 전자투표소에서 한 표를 행사하세요.";
+  const images = (await hasOgImage(election.id).catch(() => false))
+    ? [{ url: `/api/og-image/${election.id}`, width: 1200, height: 630 }]
+    : undefined;
+
+  return {
+    description,
+    openGraph: {
+      title: election.title,
+      description,
+      type: "website",
+      images,
+    },
+    twitter: {
+      card: images ? "summary_large_image" : "summary",
+      title: election.title,
+      description,
+      images: images?.map((i) => i.url),
+    },
+  };
+}
 
 export default async function LandingPage() {
   const election = await getLatestPublicElection();
@@ -29,7 +59,7 @@ export default async function LandingPage() {
   }
 
   const phase = getElectionPhase(election);
-  const turnout = await getTurnout(election.id);
+  const participation = await getParticipation(election.id);
   const resultOpen = isResultVisible(election);
 
   return (
@@ -91,9 +121,18 @@ export default async function LandingPage() {
         )}
 
         {phase === "open" && (
-          <Stack align="center" gap={6}>
-            <Box w="100%" maxW="md">
-              <TurnoutGauge turnout={turnout} />
+          <Stack align="center" gap={8}>
+            <Box
+              w="100%"
+              maxW="lg"
+              bg="bg.surface"
+              border="1px solid"
+              borderColor="border.default"
+              boxShadow="paper"
+              borderRadius="2px"
+              p={{ base: 5, md: 6 }}
+            >
+              <ParticipationLive electionId={election.id} initial={participation} />
             </Box>
             <Button
               asChild
@@ -104,18 +143,31 @@ export default async function LandingPage() {
               fontWeight={700}
               px={10}
             >
-              <NextLink href="/vote/enter-code">내 투표 코드로 입장하기</NextLink>
+              <NextLink href="/vote/enter-name">닉네임 적고 투표하러 가기</NextLink>
             </Button>
             <Text fontSize="sm" color="fg.subtle">
-              투표는 1인 1회, 익명으로 진행됩니다.
+              1인 1표 — 이름은 검수에만 쓰이고 선택 내용과는 연결되지 않습니다.
             </Text>
           </Stack>
         )}
 
         {(phase === "closed" || phase === "archived") && (
           <Stack align="center" gap={6}>
-            <Box w="100%" maxW="md">
-              <TurnoutGauge turnout={turnout} caption="최종 투표율" />
+            <Box
+              w="100%"
+              maxW="lg"
+              bg="bg.surface"
+              border="1px solid"
+              borderColor="border.default"
+              boxShadow="paper"
+              borderRadius="2px"
+              p={{ base: 5, md: 6 }}
+            >
+              <ParticipationLive
+                electionId={election.id}
+                initial={participation}
+                caption="최종 투표 현황"
+              />
             </Box>
             {resultOpen ? (
               <Button
