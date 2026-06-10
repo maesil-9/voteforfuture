@@ -1,0 +1,43 @@
+{
+  "name": "calmvote",
+  "version": "0.1.0",
+  "private": true,
+  "description": "침착투표소 — [침착한 일상 이야기방] 방장 선거를 위한 비밀 전자투표 서비스",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:reset": "tsx scripts/reset-dev.ts",
+    "seed:demo": "tsx scripts/seed.ts",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "demo:election": "tsx scripts/generate-demo-election.ts",
+    "harness:migration": "tsx scripts/harness/01-migration.ts",
+    "harness:seed": "tsx scripts/harness/02-seed.ts",
+    "harness:privacy": "tsx scripts/harness/03-privacy.ts",
+    "harness:double-vote": "tsx scripts/harness/04-double-vote.ts",
+    "harness:turnout": "tsx scripts/harness/05-turnout.ts",
+    "harness:responsive": "tsx scripts/harness/06-responsive.ts",
+    "harness:seal": "tsx scripts/harness/07-result-seal.ts",
+    "harness:all": "tsx scripts/harness/run-all.ts"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.35.0",
+    "@emotion/react": "^11.14.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "next": "^16.2.7",
+    "pg": "^8.21.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}
