@@ -10,10 +10,8 @@ import { getElection } from "@/server/sql/elections";
 import { hasOgImage } from "@/server/sql/og";
 import { getElectionPhase } from "@/server/guards/election-state";
 import { isResultVisible } from "@/server/guards/result-visibility";
-import {
-  deleteOgImageAction,
-  uploadOgImageAction,
-} from "@/server/actions/admin";
+import { deleteOgImageAction } from "@/server/actions/admin";
+import { UploadField } from "@/components/admin/UploadField";
 import { formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -141,23 +139,12 @@ export default async function ElectionAdminPage({
             </Box>
           )}
 
-          <Flex gap={4} wrap="wrap" align="center">
-            <form action={uploadOgImageAction}>
-              <input type="hidden" name="electionId" value={electionId} />
-              <Flex gap={2} align="center" wrap="wrap">
-                <input
-                  type="file"
-                  name="ogImage"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  required
-                  style={{ fontSize: "12px" }}
-                  aria-label="OG 이미지 파일 선택"
-                />
-                <Button type="submit" size="xs" bg="booth.600" color="paper.50" _hover={{ bg: "booth.700" }} fontWeight={700}>
-                  {ogExists ? "교체 업로드" : "업로드"}
-                </Button>
-              </Flex>
-            </form>
+          <Flex gap={6} wrap="wrap" align="flex-start">
+            <UploadField
+              endpoint={`/api/admin/elections/${electionId}/og-image`}
+              buttonLabel={ogExists ? "교체 업로드" : "업로드"}
+              hint="권장 1200×630 · JPEG/PNG/WebP/GIF · 3MB 이하"
+            />
             {ogExists && (
               <form action={deleteOgImageAction}>
                 <input type="hidden" name="electionId" value={electionId} />

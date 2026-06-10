@@ -20,7 +20,6 @@ import {
   deleteCandidate,
   deletePolicy,
   getCandidate,
-  setPoster,
   updateCandidate,
   updatePolicy,
 } from "../sql/candidates";
@@ -30,7 +29,7 @@ import {
   approveSubmission,
   rejectSubmission,
 } from "../services/review";
-import { deleteOgImage, setOgImage } from "../sql/og";
+import { deleteOgImage } from "../sql/og";
 import { parseKstDatetimeLocal } from "@/lib/format";
 import type { ElectionStatus } from "../types";
 
@@ -235,55 +234,9 @@ export async function deleteCandidateAction(formData: FormData): Promise<void> {
   redirect(`/admin/elections/${electionId}/candidates`);
 }
 
-// ---------- 포스터 업로드 ----------
-
-const MAX_POSTER_BYTES = 3 * 1024 * 1024;
-const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
-export async function uploadPosterAction(formData: FormData): Promise<void> {
-  const session = await requireAdmin();
-  const electionId = String(formData.get("electionId") ?? "");
-  const candidateId = String(formData.get("candidateId") ?? "");
-  const file = formData.get("poster");
-
-  const blocked = await assertStructureEditable(electionId);
-  if (blocked) {
-    redirect(`/admin/elections/${electionId}/candidates?error=locked`);
-  }
-
-  if (!(file instanceof File) || file.size === 0) {
-    redirect(`/admin/elections/${electionId}/candidates?error=nofile`);
-  }
-  if (file.size > MAX_POSTER_BYTES) {
-    redirect(`/admin/elections/${electionId}/candidates?error=toobig`);
-  }
-  if (!ALLOWED_MIME.includes(file.type)) {
-    redirect(`/admin/elections/${electionId}/candidates?error=badtype`);
-  }
-
-  const candidate = await getCandidate(candidateId);
-  if (!candidate || candidate.electionId !== electionId) {
-    redirect(`/admin/elections/${electionId}/candidates?error=notfound`);
-  }
-
-  const data = Buffer.from(await file.arrayBuffer());
-  await setPoster(candidateId, {
-    fileName: file.name,
-    mimeType: file.type,
-    sizeBytes: file.size,
-    data,
-  });
-  await insertAuditLog({
-    adminId: session.adminId,
-    action: "candidate.poster_upload",
-    targetType: "candidate",
-    targetId: candidateId,
-    metadata: { sizeBytes: file.size, mimeType: file.type },
-  });
-
-  revalidatePath(`/admin/elections/${electionId}/candidates`);
-  redirect(`/admin/elections/${electionId}/candidates?saved=1`);
-}
+// 포스터/OG 이미지 업로드는 진행률 표시를 위해 XHR 라우트로 처리한다:
+//   POST /api/admin/candidates/[candidateId]/poster
+//   POST /api/admin/elections/[electionId]/og-image
 
 // ---------- 정책 / 공약 CRUD ----------
 
@@ -328,45 +281,6 @@ export async function savePolicyAction(
 }
 
 // ---------- Open Graph 이미지 (URL 공유 미리보기) ----------
-
-export async function uploadOgImageAction(formData: FormData): Promise<void> {
-  const session = await requireAdmin();
-  const electionId = String(formData.get("electionId") ?? "");
-  const file = formData.get("ogImage");
-
-  const election = await getElection(electionId);
-  if (!election) {
-    redirect("/admin");
-  }
-  if (!(file instanceof File) || file.size === 0) {
-    redirect(`/admin/elections/${electionId}?og=nofile`);
-  }
-  if (file.size > MAX_POSTER_BYTES) {
-    redirect(`/admin/elections/${electionId}?og=toobig`);
-  }
-  if (!ALLOWED_MIME.includes(file.type)) {
-    redirect(`/admin/elections/${electionId}?og=badtype`);
-  }
-
-  const data = Buffer.from(await file.arrayBuffer());
-  await setOgImage(electionId, {
-    fileName: file.name,
-    mimeType: file.type,
-    sizeBytes: file.size,
-    data,
-  });
-  await insertAuditLog({
-    adminId: session.adminId,
-    action: "election.og_image_upload",
-    targetType: "election",
-    targetId: electionId,
-    metadata: { sizeBytes: file.size, mimeType: file.type },
-  });
-
-  revalidatePath(`/admin/elections/${electionId}`);
-  revalidatePath("/");
-  redirect(`/admin/elections/${electionId}?og=saved`);
-}
 
 export async function deleteOgImageAction(formData: FormData): Promise<void> {
   const session = await requireAdmin();

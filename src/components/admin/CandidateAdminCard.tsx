@@ -1,11 +1,11 @@
 import { Box, Button, Flex, Grid, Input, Stack, Text, Textarea } from "@chakra-ui/react";
 import { ActionForm } from "./ActionForm";
+import { UploadField } from "./UploadField";
 import {
   deleteCandidateAction,
   deletePolicyAction,
   saveCandidateAction,
   savePolicyAction,
-  uploadPosterAction,
 } from "@/server/actions/admin";
 import type { Candidate, CandidatePolicy } from "@/server/types";
 
@@ -84,23 +84,10 @@ export function CandidateAdminCard({
             )}
           </Box>
           {!structureLocked && (
-            <form action={uploadPosterAction}>
-              <input type="hidden" name="electionId" value={candidate.electionId} />
-              <input type="hidden" name="candidateId" value={candidate.id} />
-              <Stack gap={2}>
-                <input
-                  type="file"
-                  name="poster"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  required
-                  style={{ fontSize: "12px", maxWidth: "200px" }}
-                  aria-label={`${candidate.name} 포스터 파일 선택`}
-                />
-                <Button type="submit" size="xs" variant="outline" borderColor="ink.700" color="ink.900">
-                  포스터 업로드 (3MB 이하)
-                </Button>
-              </Stack>
-            </form>
+            <UploadField
+              endpoint={`/api/admin/candidates/${candidate.id}/poster`}
+              buttonLabel="포스터 업로드"
+            />
           )}
         </Stack>
 
